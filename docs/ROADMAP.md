@@ -35,28 +35,41 @@
 - First-visit introduction and replayable button-by-button tour on desktop and phone.
 - Live credential/account verification remains conditional on provider-approved tokens; no embedded OAuth/refresh service.
 
-## 0.5 — Expanded provider-backed research
+## 0.5 — Public scans, measured SEO, optional providers and private service (implemented)
+
+- Own-domain/import workspace replaces the fictional web demo UI and preset `northstar.example` domain. Empty sections offer data setup guidance.
+- Validated declared-window CSV snapshots for Search Console queries, supplied backlinks and dated manual rank observations; preview, atomic replacement and nullable data.
+- Actual query filtering/CTR, supplied referring-host analysis, watchlist, observed rank changes, compatible query-set competitor comparisons and source-aware reports.
+- Automatic **Analyze website** public HTTPS scan: robots policy, homepage plus up to two eligible internal pages, metadata/headings/topics/outbound links and static checklist. DNS/IP pinning, redirect/address restrictions, byte limits and deadlines bound collection. Optional pasted/uploaded HTML audit remains available. No full-site crawler, global index or automated SERP scraping.
+- Optional authorized read-only Google Search Console and matching-domain GA4 API reads with explicit dates, nullable metrics, pagination/time limits and sanitized errors. Free CSV imports remain independent.
+- Optional server-key Similarweb traffic estimates through an explicit paid-quota action, for up to 12 complete calendar months; estimates stay separate from measured analytics. Google/Similarweb live access remains unverified without credentials.
+- Optional Claude toolkit expanded to 21 tools: public website_scan and CSV preview are read-only; seo_import writes only on explicit user request. The other 20 tools are read-only, with network annotations for public scans and YouTube research. Web research uses actual saved data; no web demo mode.
+- Windows subscription launcher reuses Claude Code authentication/direct MCP or plugin fallback, preserving saved credentials and `.env`. A real subscription smoke call read an empty measured report.
+- Loopback production service on 4321 with private Tailscale HTTPS, one allowed private origin, supervised restarts and separately configured Windows automatic startup in this workspace.
+- Current limits: host must stay awake/signed in; full reboot recovery untested; no app-level users/roles; subscription is local Claude Code, not a web backend. Live Google/Similarweb and social permission checks still require provider credentials/entitlements; configuration is not proof of access.
+
+## 0.6 — Expanded provider-backed research
 
 - Select licensed keyword, backlink, and SERP data sources after reviewing coverage, cost, terms, and retention constraints.
 - Convert the provider interface to async operations with independent capability flags, pagination, market/device/date filters, timeouts, bounded retries, usage budgets, and cache keys.
 - Return explicit unavailable/partial responses rather than substituted demo metrics. Keep provenance on each metric and report.
-- Add first-party Search Console imports for verified sites. Distinguish observed first-party traffic from third-party estimates.
-- Build actual keyword intersections and competitor content gaps from provider rows.
+- Extend the existing authorized Google reads with managed OAuth/refresh, scheduled sync and change history if needed. Preserve query-table coverage limits and distinguish observed clicks/sessions from third-party estimates.
+- Extend existing compatible query-set comparisons to licensed index/content datasets without claiming private competitor traffic.
 - Acceptance: integration fixtures and a limited live smoke test establish timestamps, source labels, costs, and graceful failure.
 
-## 0.6 — Controlled site crawler
+## 0.7 — Controlled site crawler
 
-- Site-ownership/permission workflow; robots policy; same-origin crawl boundaries and sitemap discovery.
-- HTTP(S) allowlist, public-IP DNS resolution, redirect revalidation, DNS-rebinding protection, restricted outbound networking, response-byte limits, timeouts and crawl budgets.
+- Extend the existing three-page robots-aware scanner into an ownership/permission workflow with explicit larger crawl budgets, same-origin boundaries and sitemap traversal.
+- Preserve existing HTTPS/public-IP pinning, redirect revalidation, private-address restrictions, response-byte limits and deadlines while adding restricted-worker networking and configurable per-site budgets.
 - Queue-based crawl jobs with cancellation, retries, per-host throttling and job progress.
 - Persist pages, response headers, links and findings; detect duplicate titles, broken internal links, canonical conflicts and indexing issues.
 - Acceptance: local test sites cover redirects, private-IP attempts, robots exclusions, malformed HTML and cancellation; never expose arbitrary URL fetching as an unguarded endpoint.
 
-## 0.7 — Rank history and reports
+## 0.8 — Scheduled rank collection and reports
 
-- Append-only SERP observations keyed by project, keyword, market, device and date.
+- Extend imported manual observation history with provider-collected SERP observations keyed by project, keyword, market, device and date.
 - Scheduled jobs with idempotency keys, provider quotas, alerts and missing-result states.
-- Audited rank changes, visibility formula documentation, comparison periods, saved report configurations and printable full reports.
+- Audited scheduled-result changes, visibility formula documentation, comparison periods, saved report configurations and scheduled report delivery.
 - Acceptance: history survives restarts, retrying a job does not duplicate observations, and missing ranks never become invented positions.
 
 ## 1.0 — Multi-user release
@@ -64,4 +77,4 @@
 - Authentication, organization membership, project-level authorization, CSRF protection, rate limits, audit logs and migrations.
 - Managed PostgreSQL, queue workers, server-side secret storage, backups and restore verification.
 - Retention/export/delete controls, keyboard/screen-reader review and contrast audit, browser end-to-end CI, accessibility and performance budgets.
-- Deployment documentation and operational runbooks. Remove the loopback guard only as part of this authenticated deployment milestone.
+- Public deployment runbooks and restore checks. Keep the existing private Tailscale service separate; remove the loopback bind only as part of this authenticated multi-user milestone.

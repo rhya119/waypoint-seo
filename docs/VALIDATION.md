@@ -2,6 +2,33 @@
 
 Completed 2026-10-16 on Windows with Node 24.19.0 and npm 12.0.2.
 
+## v0.5 — Public website scans, source data and private service
+
+`npm run check` passes **80 tests**, strict TypeScript checking and the production build. New checks cover robots-aware public HTTPS scanning, vetted/pinned DNS, private and redirect target rejection, time/byte limits, extracted markup, Google property authorization and pagination, domain-filtered GA4 reports, explicit Similarweb requests, sanitized errors and source-separated persistence. Successful empty Google query responses replace older same-period rows; missing access preserves saved sources. HTTP/HTTPS and apex/www URL-prefix scopes stay distinct. Fractional third-party visit estimates are retained. Real stdio tests discover 21 tools: 20 read-only tools and the explicit CSV import write.
+
+The live public scanner successfully read `iperly.lk` and two eligible internal pages, all returning HTTP 200. The homepage scan found 1,154 words, 38 headings and 49 internal links at the time of this check. These are public markup observations, not traffic or ranking measurements. The result was also saved through the private production HTTPS endpoint. The web UI no longer exposes the fictional web demo; unknown search/traffic values remain unavailable until a source is supplied.
+
+REA 6.4.0 ran against an isolated QA database on port 4323. All final scenarios below completed with zero page-error events:
+
+| Scenario | Evidence | Result |
+| --- | --- | --- |
+| Public `iperly.lk` scan, desktop | `ev_4b1bdca1f6f85f445da107d982cd15924decc17362a3db32073ac6e2a040a01d` | 17 steps: completed scan, public topics/links/audit, both traffic choices, reports and return navigation |
+| Public scan, 390 px phone | `ev_01de9ed674e00914bb1c38548fc373278e969636b134b42d5f1f3e5a1f83f6ca` | Same 17-step flow |
+| Free imports, desktop | `ev_192d55e0c4cac8aebc874de539170977684e336ea38b0fe9770ed99cd2206fc7` | 49 steps: query/link/rank imports, filtering, audit, watchlist, compatible comparison and reload |
+| Free imports, phone | `ev_66bbaabb6ef88b2782b12c175db24c8b20110ed9b3f0dea9cd760ae427ccd249` | Same 49-step flow |
+| Traffic setup, desktop / phone | `ev_a544757379b0b650d41a06c2bb891c93df5f0ee993d679dd8b3f732a3b9ae412` / `ev_d5a09d3b8bd47460af43ff083c3ebe52a9a5d77e8ad11f00c7d2f1994c50b1b0` | Both options and Google setup expanded |
+| Actual private HTTPS service | `ev_333b8a252382e42d720b99b71c4f77ee3f29fef6db303d5c0702590e85af5238` | 10 read-only steps: saved public results, traffic choices, connected Claude Code status and return |
+
+Desktop and phone screenshots were visually inspected. A phone header wrapping issue was corrected. An initial desktop import run had an ambiguous QA locator after public comparisons introduced a second table; the locator was narrowed and all 49 steps then passed. Synthetic import fixtures stayed in the ignored QA database. Production received only the requested real public scan. Browser download delivery, print-to-PDF output and screen-reader behavior were not established by these runs.
+
+The private production service was restarted through the verified per-user Task Scheduler task. Loopback and Tailscale Serve HTTPS health checks pass; the Node worker belongs to the recorded scheduled supervisor and binds only to 127.0.0.1:4321. The duplicate, verified Waypoint Startup shortcut was removed. No public Funnel or router forwarding was enabled. HTTPS browser verification ran from this host; another device and full reboot/sign-in recovery were not tested. The PC must remain awake and signed in.
+
+Claude Code reports an authenticated Claude Pro subscription and the local MCP registration is connected. An earlier actual Claude Code smoke conversation called the toolkit and correctly reported an empty imported dataset. This integration uses the host CLI; it does not turn subscription credentials into a remote web API. The optional in-app Anthropic API advisor remains separate.
+
+Google and Similarweb setup both currently report **unconfigured** in production. Their contract/HTTP/persistence behavior is covered by fixtures, but no real authorized Google pull or paid Similarweb request was made. Google property permissions and a valid read-only access token are required; tokens need manual renewal. Similarweb needs a provider plan with API access and may have no coverage for a site. No automatic provider requests occur when a website is scanned or a report is opened.
+
+Earlier version sections below are historical records and do not describe the current web UI.
+
 ## v0.4 — Seven native account adapters and clickable introduction
 
 `npm run check` passes **38 tests**, TypeScript checking and the production build. Added official-response-shaped fixtures cover all seven platform mappings, unsupported/null metrics, fixed-origin cursor pagination, latest-per-post capture selection without double counting, separation from daily imports, missing/invalid setup, cooldowns, provider body errors, partial X failures, sanitized errors, HTTP validation and atomic persistence. Meta authentication/rate-limit codes returned with HTTP 400 abort optional insight reads correctly. Both actual stdio entry points discover 18 read-only tools; `social_api_snapshots` returns an empty source-labeled result when no database exists. Plugin packaging excludes credentials, SQLite, dependencies and capture artifacts.

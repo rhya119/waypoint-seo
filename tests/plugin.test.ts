@@ -9,7 +9,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 test('optional plugin launcher runs the actual MCP server in one stdio process', { timeout: 20000 }, async () => {
   const transport = new StdioClientTransport({ command: process.execPath, args: [resolve('mcp/launch.mjs')], env: { PATH: process.env.PATH || '', DATABASE_PATH: resolve('artifacts/missing-plugin-test.sqlite') }, stderr: 'pipe' });
   const client = new Client({ name: 'plugin-test', version: '1.0.0' });
-  try { await client.connect(transport); const tools = await client.listTools(); assert.equal(tools.tools.length, 18); assert.ok(tools.tools.some(tool => tool.name === 'rank_tracking')); const result = await client.callTool({ name: 'social_keywords', arguments: { dataset: 'example', platform: 'youtube' } }); assert.equal(JSON.parse((result.content as { text: string }[])[0].text).dataset, 'example'); }
+  try { await client.connect(transport); const tools = await client.listTools(); assert.equal(tools.tools.length, 21); assert.ok(tools.tools.some(tool => tool.name === 'rank_tracking')); const result = await client.callTool({ name: 'social_keywords', arguments: { dataset: 'example', platform: 'youtube' } }); assert.equal(JSON.parse((result.content as { text: string }[])[0].text).dataset, 'example'); }
   finally { await client.close(); }
 });
 test('plugin source bundle contains the full toolkit and excludes credentials, data, captures and dependencies', () => {

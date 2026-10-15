@@ -93,21 +93,21 @@ const steps: Step[] = [
     page: 3,
     target: '[data-tour="nav-3"]',
     title: "Check a website’s HTML",
-    body: "Click Site audit. Paste your page HTML and click Run audit for actual static checks. The other web research tools currently show labeled demo metrics.",
+    body: "Click Site audit. Enter a domain and click Analyze website to check its public pages. You can also paste or upload page HTML and click Run HTML audit for static checks.",
     click: true,
   },
   {
     page: 6,
     target: '[data-tour="nav-6"]',
     title: "Find domain reports",
-    body: "Click Reports for the web SEO report builder. Its domain, backlink and ranking numbers are currently synthetic. Social exports and API snapshot exports contain the data you supplied or pulled.",
+    body: "Click Reports to combine your public website scan, connected Google data, optional traffic estimates, imported queries, supplied links and observed ranks. Every source keeps its own coverage label.",
     click: true,
   },
   {
     page: 8,
     target: '[data-tour="claude-plugin"]',
     title: "Use the toolkit from Claude",
-    body: "Open the plugin or direct MCP instructions here to connect Claude to the local toolkit. The in-app Claude advisor is a separate opt-in API feature. You can replay this tour any time with Take a tour.",
+    body: "Open the plugin or direct MCP instructions here to connect Claude to the local toolkit. Use Start-Claude-SEO.cmd on the host computer for your Claude subscription. The in-app advisor is a separate opt-in API feature. You can replay this tour any time with Take a tour.",
   },
 ];
 export default function GuidedTour({

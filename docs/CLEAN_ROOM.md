@@ -1,6 +1,6 @@
 # Clean-room research and design record
 
-Prepared 2026-10-16. This is an independent scaffold with original implementation and design. The reference is [Semrush's public homepage](https://www.semrush.com/); the research boundary was the unauthenticated page and its product menu.
+Prepared 2026-10-16 and updated for the current v0.5 implementation. This is an independent toolkit with original implementation and design. The initial reference was [Semrush's public homepage](https://www.semrush.com/); that research boundary was the unauthenticated page and its product menu.
 
 ## REA observations
 
@@ -12,7 +12,9 @@ REA 6.4.0 was invoked through its pinned npm CLI. The current agent session had 
 
 Observed: the menu exposes broad categories for keyword discovery, competitor comparisons, technical site health, rank monitoring, marketing reports and backlink analysis. A domain input is present on the public homepage. These are category/interaction observations only. The evidence does not establish the vendor's authenticated workflows, schemas, algorithms, datasets, performance, or internal architecture.
 
-## Independent implementation choices
+## Initial scaffold choices (historical 0.1)
+
+This table records the first scaffold, not current behavior. The fictional web demo UI and its preset example domain have since been removed. Legacy example HTTP endpoints remain only for compatibility; normal web UI/MCP tools use actual observations.
 
 | Requested category | Waypoint's independently chosen first implementation |
 | --- | --- |
@@ -26,10 +28,30 @@ Observed: the menu exposes broad categories for keyword discovery, competitor co
 
 The mint/forest palette, compass identity, typography, navigation, copy, charts, forms and data generation are original design decisions. Product naming is a working project name; a trademark/domain clearance search has not been performed.
 
+## Current independent implementation (0.5)
+
+| Category | Current Waypoint behavior and source boundary |
+| --- | --- |
+| Domain overview | Explicit public HTTPS scan, saved findings, actual imported/authorized query data and separately labeled optional provider reports |
+| Keyword research | Homepage word-frequency topics plus imported/authorized query clicks, impressions, CTR and average position; no global keyword index |
+| Backlinks | User-supplied source/target link snapshots; scanned outbound links shown separately, without claiming inbound coverage |
+| Site audit | Robots-aware homepage plus up to two eligible same-origin pages, with independent markup checks; pasted HTML checks also available |
+| Rank tracking | Watchlist and actual supplied dated rank observations; no automated SERP scraping or invented positions |
+| Competitors | Compatible imported query-set overlap/gaps; optional paid traffic estimates do not reveal private account analytics |
+| Reports | Source-aware saved observations, scan findings, audits and optional provider reports, preserving independent dates and missing values |
+| Social SEO | Daily imports, seven official account adapters with separate lifetime counters, lexical comparisons and public YouTube discovery |
+| Claude | Optional local Claude Code toolkit, 21 MCP tools and three original workflow skills; separate opt-in Anthropic API advisor |
+
+The scanner uses a deliberately limited original collection design: public-address DNS validation and IP pinning, TLS hostname checks, robots policy, redirect restrictions, byte/deadline caps and static parsing. It does not log in, execute page scripts, bypass restrictions or reproduce commercial crawling coverage. Topics are lexical frequencies; page links are not a backlink index; checklist scores are not vendor scores or search-engine rankings.
+
+Google Search Console/GA4 reads use the user's authorized read-only access and fixed official APIs. Similarweb traffic estimates require the user's paid API entitlement and an explicit request for complete months. These integrations follow public provider documentation; they neither recover proprietary implementation nor bypass data access. No Google/Similarweb credentials are configured in this workspace, so live provider authorization remains unverified. See [data workflows and sources](FREE_SEO.md).
+
+A private Tailscale service hosts the user's shared local workspace. Claude subscription access stays in Claude Code on the host; no subscription session is repurposed as the website's API backend. See [private deployment](PRIVATE_SERVICE.md) and [Claude boundaries](CLAUDE.md).
+
 ## Source boundary
 
 Only normal third-party libraries from npm are dependencies. The project contains no vendor source, extracted scripts, page text, logos, screenshots, or data. Raw research captures are kept under ignored `artifacts/` locally and excluded from the commit. Repository documentation records original factual summaries and Evidence identifiers rather than reproducing public page content.
 
 ## Unknown and deferred
 
-No claims are made about reproducing commercial data coverage, accuracy, scoring formulas, paid endpoints, or full product parity. Provider licensing, actual index construction, live crawling, scheduled SERP checks and production hosting remain roadmap milestones. Feature categories came from public observation and the user brief; backend and UI behavior were designed independently.
+No claims are made about reproducing commercial data coverage, accuracy, scoring formulas, private endpoints or full product parity. A broad licensed keyword/backlink index, full-site crawler, scheduled SERP collection and authenticated multi-user public hosting remain roadmap work. The current limited public scanner and private single-owner service do not establish those capabilities. Feature categories came from public observation and the user brief; backend and UI behavior were designed independently.

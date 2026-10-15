@@ -28,6 +28,7 @@ export default function Integrations({
   onClaudeChange: (enabled: boolean) => void;
 }) {
   const [data, setData] = useState<Connections>();
+  const [codeStatus, setCodeStatus] = useState<{ installed: boolean; loggedIn: boolean; subscription: string | null; authMethod: string | null }>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -35,6 +36,7 @@ export default function Integrations({
       .then(setData)
       .catch((e) => setError(e.message));
   }, []);
+  useEffect(() => { api<{ installed: boolean; loggedIn: boolean; subscription: string | null; authMethod: string | null }>("/integrations/claude-code").then(setCodeStatus).catch(() => {}); }, []);
   return (
     <div className="integrations-workspace">
       <div className="integration-intro">
@@ -56,7 +58,10 @@ export default function Integrations({
             <Plug size={25} />
           </span>
           <span className="tag">OPTIONAL</span>
-          <h3>Waypoint for Claude</h3>
+          <h3>Use your Claude subscription</h3>
+          <p className="connection-state" data-claude-code-connected={Boolean(codeStatus?.loggedIn && codeStatus.authMethod === "claude.ai")}>{!codeStatus ? 'Checking local Claude Code…' : codeStatus.loggedIn && codeStatus.authMethod === 'claude.ai' ? `Claude Code signed in${codeStatus.subscription ? ` · ${codeStatus.subscription.toUpperCase()}` : ''}` : codeStatus.installed ? 'Claude Code installed · subscription sign-in required' : 'Install Claude Code and sign in with your subscription'}</p>
+          <p>On the host computer, open <code>Start-Claude-SEO.cmd</code> from the project folder. It uses your Claude Code subscription account and connects the local Waypoint tools. No separate Anthropic API key is needed for this route.</p>
+          <p>Ask: “Use Waypoint to analyze my imported SEO data for mydomain.com.” Claude can validate CSVs, import them when you request it, inspect actual metrics, compare domains and audit supplied HTML. Plan usage limits still apply.</p>
           <p>
             A Claude Code plugin for the whole platform: keyword research,
             performance analysis, similar content, competitors, site audits,
@@ -69,7 +74,7 @@ export default function Integrations({
             </li>
             <li>
               <Check size={14} />
-              Keep source labels and missing-data limits
+              Preview CSVs and import them on your request
             </li>
             <li>
               <Check size={14} />
@@ -236,7 +241,7 @@ export default function Integrations({
         <ShieldCheck size={18} />
         <p>
           Provider keys stay on the server. Imported data stays in local SQLite.
-          The optional plugin exposes read-only analysis tools and never posts
+          The optional plugin exposes analysis tools plus explicit local CSV imports. It never posts
           to social accounts.
         </p>
       </div>

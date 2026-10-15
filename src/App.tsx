@@ -1,328 +1,139 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowRight,
-  ArrowUpRight,
-  BarChart3,
   Check,
   ChevronDown,
   CircleHelp,
   Compass,
   FileChartColumn,
-  Globe2,
   LayoutDashboard,
   Link2,
-  ListFilter,
-  Plus,
   Plug,
   Radar,
   Search,
   Share2,
   ShieldCheck,
-  Sparkles,
   Target,
-  Trash2,
   X,
 } from "lucide-react";
-import type { Analysis, Audit, Keyword, Project, Rank } from "../shared/types";
-import { api, csv, download, number } from "./lib";
+import { api } from "./lib";
 import SocialSeo from "./SocialSeo";
-import ClaudeAdvisor from "./ClaudeAdvisor";
 import Integrations from "./Integrations";
 import GuidedTour from "./GuidedTour";
-
+import WebWorkspace from "./WebWorkspace";
 const pages = [
   {
     name: "Domain overview",
     icon: LayoutDashboard,
-    caption: "The bigger picture, brought into focus.",
+    caption: "Public website findings, traffic and search performance in one place.",
   },
   {
     name: "Keyword research",
     icon: Search,
-    caption: "Find the next conversation worth joining.",
+    caption:
+      "Explore observed search queries, clicks, impressions and average positions.",
   },
   {
     name: "Backlink analysis",
     icon: Link2,
-    caption: "Understand the connections behind visibility.",
+    caption: "Inspect your supplied source links, targets and anchors.",
   },
   {
     name: "Site audit",
     icon: ShieldCheck,
-    caption: "A healthier foundation for your next chapter.",
+    caption: "Scan your public pages and find markup issues to fix.",
   },
   {
     name: "Rank tracking",
     icon: Target,
-    caption: "Keep a clear view of your search positions.",
+    caption: "Keep your manually observed positions and watchlist together.",
   },
   {
     name: "Competitor research",
     icon: Radar,
-    caption: "Find the space where your brand can grow.",
+    caption: "Compare authorized domain datasets with matching coverage.",
   },
   {
     name: "Reports",
     icon: FileChartColumn,
-    caption: "Turn your research into a useful next step.",
+    caption: "Export a report with your measured results and source details.",
   },
   {
     name: "Social SEO",
     icon: Share2,
-    caption: "Keyword performance, content comparisons, and account intelligence.",
+    caption:
+      "Keyword performance, content comparisons, and account intelligence.",
   },
-  { name: "Integrations", icon: Plug, caption: "Data connections and optional Claude tools for your whole platform." },
+  {
+    name: "Integrations",
+    icon: Plug,
+    caption: "Data connections and your Claude Code subscription workflow.",
+  },
 ];
-const sampleHtml = `<!doctype html><html lang="en"><head><title>A thoughtful guide to sustainable living</title><meta name="description" content="Explore practical ideas for a more considered everyday life, from small habits to a healthier home."><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="canonical" href="https://northstar.example/journal"></head><body><h1>Small changes, lasting impact</h1><img src="garden.jpg"><h2>Start with your space</h2></body></html>`;
-
-function Panel({
-  title,
-  detail,
-  children,
-  action,
-}: {
-  title: string;
-  detail?: string;
-  children: ReactNode;
-  action?: ReactNode;
-}) {
-  return (
-    <section className="panel">
-      <div className="panel-head">
-        <div>
-          <h2>{title}</h2>
-          {detail && <p>{detail}</p>}
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-function Tag({ children, tone = "" }: { children: ReactNode; tone?: string }) {
-  return <span className={`tag ${tone}`}>{children}</span>;
-}
-function Chart({ analysis, period }: { analysis: Analysis; period: string }) {
-  const values = analysis.history.slice(period === "6 months" ? 6 : 0);
-  const max = Math.max(...values.map((v) => v.traffic)) * 1.15;
-  const points = values
-    .map(
-      (v, i) =>
-        `${45 + (i * 690) / (values.length - 1)},${210 - (v.traffic / max) * 175}`,
-    )
-    .join(" ");
-  return (
-    <div className="chart">
-      <svg
-        viewBox="0 0 780 250"
-        role="img"
-        aria-label={`Synthetic organic traffic over ${period}`}
-      >
-        <defs>
-          <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#27a28a" stopOpacity=".19" />
-            <stop offset="100%" stopColor="#27a28a" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {[40, 95, 150, 205].map((y, i) => (
-          <g key={y}>
-            <line
-              x1="45"
-              y1={y}
-              x2="740"
-              y2={y}
-              stroke="#e7ece9"
-              strokeDasharray="3 5"
-            />
-            <text x="0" y={y + 4} fill="#909b95" fontSize="10">
-              {number(max * (1 - i / 3))}
-            </text>
-          </g>
-        ))}
-        <polygon points={`45,211 ${points} 735,211`} fill="url(#fill)" />
-        <polyline
-          points={points}
-          fill="none"
-          stroke="#258a74"
-          strokeWidth="2.7"
-          strokeLinejoin="round"
-        />
-        {values.map((v, i) => (
-          <g key={v.date}>
-            <circle
-              cx={45 + (i * 690) / (values.length - 1)}
-              cy={210 - (v.traffic / max) * 175}
-              r="3"
-              fill="#258a74"
-            >
-              <title>
-                {v.date}: {v.traffic.toLocaleString()} demo visits
-              </title>
-            </circle>
-            <text
-              x={45 + (i * 690) / (values.length - 1)}
-              y="239"
-              textAnchor="middle"
-              fill="#909b95"
-              fontSize="10"
-            >
-              {new Date(v.date).toLocaleDateString("en", {
-                month: "short",
-                timeZone: "UTC",
-              })}
-            </text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
-}
 export default function App() {
   const [page, setPage] = useState(() => {
-    const found = pages.findIndex(p => p.name.toLowerCase().replaceAll(" ", "-") === location.hash.slice(1));
-    return found < 0 ? 7 : found;
+    const found = pages.findIndex(
+      (p) =>
+        p.name.toLowerCase().replaceAll(" ", "-") === location.hash.slice(1),
+    );
+    return found < 0 ? 0 : found;
   });
-  const [tourOpen, setTourOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(() => { try { return localStorage.getItem('waypoint-tour-v1') !== 'seen'; } catch { return true; } });
-  function dismissIntroduction() { setTourOpen(false); setShowWelcome(false); try { localStorage.setItem('waypoint-tour-v1', 'seen'); } catch { /* Storage may be disabled. */ } }
-  const [claudeEnabled, setClaudeEnabled] = useState(false);
-  const [advisorOpen, setAdvisorOpen] = useState(false);
-  useEffect(() => { document.querySelector('nav button[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [page]);
-  const [domainInput, setDomainInput] = useState("northstar.example");
-  const [domain, setDomain] = useState("northstar.example");
-  const [analysis, setAnalysis] = useState<Analysis>();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [ranks, setRanks] = useState<Rank[]>([]);
-  const [query, setQuery] = useState("sustainable living");
-  const [keywords, setKeywords] = useState<Keyword[]>([]);
-  const [filter, setFilter] = useState("All intents");
-  const [period, setPeriod] = useState("12 months");
-  const [html, setHtml] = useState(sampleHtml);
-  const [audit, setAudit] = useState<Audit>();
-  const [rankWord, setRankWord] = useState("");
-  const [country, setCountry] = useState("NZ");
-  const [device, setDevice] = useState("desktop");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [help, setHelp] = useState(false);
-  const [report, setReport] = useState(false);
-  const [linkFilter, setLinkFilter] = useState("All links");
-  const project = projects.find((p) => p.domain === domain);
-  useEffect(() => { api<{ claude: { enabled: boolean } }>("/integrations").then(value => setClaudeEnabled(value.claude.enabled)).catch(() => {}); }, []);
-  useEffect(() => {
-    api<Project[]>("/projects")
-      .then(setProjects)
-      .catch((e) => setError(e.message));
-  }, []);
-  useEffect(() => {
-    let active = true;
-    api<Analysis>(`/analysis?domain=${encodeURIComponent(domain)}`)
-      .then((a) => {
-        if (active) setAnalysis(a);
-      })
-      .catch((e) => setError(e.message));
-    return () => {
-      active = false;
-    };
-  }, [domain]);
-  useEffect(() => {
-    let active = true;
-    if (!project) {
-      setRanks([]);
-      return;
-    }
-    api<Rank[]>(`/ranks?projectId=${project.id}`)
-      .then((r) => {
-        if (active) setRanks(r);
-      })
-      .catch((e) => setError(e.message));
-    return () => {
-      active = false;
-    };
-  }, [project]);
-  useEffect(() => {
-    if (notice) {
-      const timer = setTimeout(() => setNotice(""), 4500);
-      return () => clearTimeout(timer);
-    }
-  }, [notice]);
-  async function run(task: () => Promise<void>) {
-    setBusy(true);
-    setError("");
+  const [domain, setDomain] = useState(() => {
     try {
-      await task();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
+      return localStorage.getItem("waypoint-own-domain") || "";
+    } catch {
+      return "";
     }
+  });
+  const [claudeEnabled, setClaudeEnabled] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try {
+      return localStorage.getItem("waypoint-tour-v1") !== "seen";
+    } catch {
+      return true;
+    }
+  });
+  const [help, setHelp] = useState(false);
+  function chooseDomain(value: string) {
+    setDomain(value);
+    try {
+      localStorage.setItem("waypoint-own-domain", value);
+    } catch {}
+  }
+  function closeTour() {
+    setTourOpen(false);
+    setShowWelcome(false);
+    try {
+      localStorage.setItem("waypoint-tour-v1", "seen");
+    } catch {}
   }
   function navigate(index: number) {
     setPage(index);
-    setReport(false);
     location.hash = pages[index].name.toLowerCase().replaceAll(" ", "-");
   }
   useEffect(() => {
     const handler = () => {
-      const i = pages.findIndex(
+      const index = pages.findIndex(
         (p) =>
           p.name.toLowerCase().replaceAll(" ", "-") === location.hash.slice(1),
       );
-      if (i >= 0) setPage(i);
+      if (index >= 0) setPage(index);
     };
     addEventListener("hashchange", handler);
     return () => removeEventListener("hashchange", handler);
   }, []);
-  async function saveProject() {
-    const saved = await api<Project>("/projects", { domain });
-    setProjects(await api<Project[]>("/projects"));
-    setNotice(`${saved.domain} saved to your workspace.`);
-    return saved;
-  }
-  async function research(e?: FormEvent) {
-    e?.preventDefault();
-    await run(async () => {
-      const data = await api<{ rows: Keyword[] }>(
-        `/keywords?query=${encodeURIComponent(query)}`,
-      );
-      setKeywords(data.rows);
-    });
-  }
-  async function track(keyword: string) {
-    const saved = project || (await saveProject());
-    await api("/ranks", { projectId: saved.id, keyword, country, device });
-    setRanks(await api<Rank[]>(`/ranks?projectId=${saved.id}`));
-    setNotice(`Tracking “${keyword}” in demo mode.`);
-  }
-  function exportKeywords() {
-    download(
-      "waypoint-demo-keywords.csv",
-      csv([
-        [
-          "Source",
-          "Keyword",
-          "Monthly volume (synthetic)",
-          "Difficulty (synthetic)",
-          "CPC USD (synthetic)",
-          "Intent",
-        ],
-        ...keywords.map((k) => [
-          "demo",
-          k.keyword,
-          k.volume,
-          k.difficulty,
-          k.cpc,
-          k.intent,
-        ]),
-      ]),
-      "text/csv",
-    );
-  }
-  const visibleKeywords = keywords.filter(
-    (k) => filter === "All intents" || k.intent === filter,
-  );
+  useEffect(() => {
+    document
+      .querySelector('nav button[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [page]);
+  useEffect(() => {
+    api<{ claude: { enabled: boolean } }>("/integrations")
+      .then((r) => setClaudeEnabled(r.claude.enabled))
+      .catch(() => {});
+  }, []);
   return (
     <div className="app-shell" data-page={pages[page].name}>
       <aside className="sidebar">
@@ -340,7 +151,7 @@ export default function App() {
           <span className="workspace-avatar">W</span>
           <div>
             <strong>My workspace</strong>
-            <small>Search + social intelligence</small>
+            <small>Private SEO tools</small>
           </div>
           <ChevronDown size={14} />
         </div>
@@ -356,29 +167,37 @@ export default function App() {
             >
               <p.icon size={18} />
               {p.name}
-              {i === 0 && <span className="nav-dot" />}
             </button>
           ))}
         </nav>
         <div className="sidebar-note">
           <span className="mini-spark">
-            <Sparkles size={17} />
+            <Compass size={17} />
           </span>
           <h3>
-            A little clarity.
-            <br />A lot of possibility.
+            Your data.
+            <br />
+            Useful decisions.
           </h3>
-          <p>Good research is where meaningful growth begins.</p>
-          <button onClick={() => setHelp(true)}>
+          <p>
+            Scan websites, connect performance data, and investigate what the
+            evidence shows.
+          </p>
+          <button
+            onClick={() => {
+              setHelp(false);
+              setTourOpen(true);
+            }}
+          >
             Explore your toolkit <ArrowRight size={14} />
           </button>
         </div>
         <button className="help-button" onClick={() => setHelp(true)}>
           <CircleHelp size={17} />
-          About this workspace
+          How this workspace works
         </button>
         <div className="profile">
-          <span>MR</span>
+          <span>W</span>
           <div>
             <strong>My research</strong>
             <small>Private workspace</small>
@@ -393,847 +212,101 @@ export default function App() {
           </div>
           <div className="topbar-right">
             <span className="demo-dot" />
-            {page < 7 ? "Web SEO demo data" : "Local performance workspace"} <span className="divider" />{" "}
-            <button onClick={() => navigate(8)}><Plug size={15}/>Integrations</button>
-            <button className="tour-start" onClick={() => { setHelp(false); setTourOpen(true); }}><Compass size={15}/>Take a tour</button>
+            <span className="workspace-status">
+            {page < 7
+              ? "Your data / free tools"
+              : "Private performance workspace"}
+            </span>
+            <span className="divider" />
+            <button onClick={() => navigate(8)}>
+              <Plug size={15} />
+              Integrations
+            </button>
+            <button
+              className="tour-start"
+              onClick={() => {
+                setHelp(false);
+                setTourOpen(true);
+              }}
+            >
+              <Compass size={15} />
+              Take a tour
+            </button>
             <button aria-label="Help" onClick={() => setHelp(true)}>
               <CircleHelp size={18} />
             </button>
-            <span className="avatar">MR</span>
           </div>
         </header>
         <main>
-          {showWelcome && !tourOpen && <section className="tour-welcome"><div><strong>Welcome to Waypoint.</strong><p>Let us show you which buttons to click, from your first keyword to connected account data.</p></div><div><button className="button primary" onClick={() => setTourOpen(true)}>Start guided tour <ArrowRight size={14}/></button><button className="icon-button" aria-label="Dismiss introduction" onClick={dismissIntroduction}><X size={16}/></button></div></section>}
+          {showWelcome && !tourOpen && (
+            <section className="tour-welcome">
+              <div>
+                <strong>Welcome to Waypoint.</strong>
+                <p>
+                  Enter a website to scan its public pages. Add traffic data
+                  with connections or imports. The tour points to the controls.
+                </p>
+              </div>
+              <div>
+                <button
+                  className="button primary"
+                  onClick={() => setTourOpen(true)}
+                >
+                  Start guided tour <ArrowRight size={14} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Dismiss introduction"
+                  onClick={closeTour}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </section>
+          )}
           <div className="page-heading">
             <div>
-              <div className="eyebrow">YOUR SEARCH WORKSPACE</div>
+              <div className="eyebrow">YOUR PRIVATE SEO WORKSPACE</div>
               <h1>{pages[page].name}</h1>
               <p>{pages[page].caption}</p>
             </div>
-            <button
-              className="button secondary"
-              onClick={() => {
-                navigate(6);
-                setReport(true);
-              }}
-            >
+            <button className="button secondary" onClick={() => navigate(6)}>
               <ArrowDownToLine size={16} />
               Create report
             </button>
           </div>
-          <div className="domain-toolbar">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void run(async () => {
-                  const a = await api<Analysis>(
-                    `/analysis?domain=${encodeURIComponent(domainInput)}`,
-                  );
-                  setDomain(a.domain);
-                  setDomainInput(a.domain);
-                  setAnalysis(a);
-                  setAudit(undefined);
-                  setReport(false);
-                });
-              }}
-            >
-              <Globe2 size={18} />
-              <input
-                aria-label="Domain to analyze"
-                value={domainInput}
-                onChange={(e) => setDomainInput(e.target.value)}
-                placeholder="example.com"
-                required
-              />
-              <button className="button primary" disabled={busy}>
-                Analyze <ArrowRight size={15} />
-              </button>
-            </form>
-            <div className="toolbar-meta">
-              <span>Global demo dataset</span>
-              <span className="tiny-dot" />
-              USD
-            </div>
-            <button
-              className="button secondary small"
-              onClick={() =>
-                void run(async () => {
-                  await saveProject();
-                })
-              }
-              disabled={busy}
-            >
-              <Plus size={15} />
-              {project ? "Project saved" : "Save project"}
-            </button>
-          </div>
-          {projects.length > 0 && (
-            <div className="project-switch">
-              <label htmlFor="project">Saved projects</label>
-              <select
-                id="project"
-                value={project?.id || ""}
-                onChange={(e) => {
-                  const p = projects.find(
-                    (p) => p.id === Number(e.target.value),
-                  );
-                  if (p) {
-                    setDomain(p.domain);
-                    setDomainInput(p.domain);
-                    setAudit(undefined);
-                  }
-                }}
-              >
-                <option value="">Choose a project</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.domain}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {page < 7 && (
+            <WebWorkspace
+              page={page}
+              domain={domain}
+              onDomain={chooseDomain}
+              onIntegrations={() => navigate(8)}
+            />
           )}
-          {error && (
-            <div role="alert" className="error">
-              {error}
-              <button onClick={() => setError("")} aria-label="Dismiss error">
-                <X size={16} />
-              </button>
-            </div>
+          {page === 7 && (
+            <SocialSeo
+              domain={domain}
+              claudeEnabled={claudeEnabled}
+              onIntegrations={() => navigate(8)}
+            />
           )}
-          <div className="data-notice">
-            <span className="notice-icon">
-              <Sparkles size={14} />
-            </span>
-            <strong>A space to explore.</strong> Search metrics are synthetic
-            demo data. HTML audit results come from your submitted markup.
-            <button onClick={() => setHelp(true)}>
-              How it works <ArrowUpRight size={13} />
-            </button>
-          </div>
-          {!analysis ? (
-            <div className="empty">Loading your workspace…</div>
-          ) : (
-            <>
-              {page === 0 && (
-                <>
-                  <div className="section-kicker">
-                    <div>
-                      <Globe2 size={17} />
-                      <strong>{domain}</strong>
-                      <Tag>Demo snapshot</Tag>
-                    </div>
-                    <span>Illustrative Jan–Dec 2026</span>
-                  </div>
-                  <div className="metrics">
-                    {[
-                      {
-                        label: "Organic traffic",
-                        value: analysis.traffic,
-                        icon: BarChart3,
-                        sub: "Illustrative monthly visits",
-                      },
-                      {
-                        label: "Organic keywords",
-                        value: analysis.keywords,
-                        icon: Search,
-                        sub: "Illustrative ranked keywords",
-                      },
-                      {
-                        label: "Backlinks",
-                        value: analysis.backlinks,
-                        icon: Link2,
-                        sub: "Illustrative incoming links",
-                      },
-                      {
-                        label: "Referring domains",
-                        value: analysis.referringDomains,
-                        icon: Globe2,
-                        sub: "Illustrative unique domains",
-                      },
-                    ].map((m) => (
-                      <div className="metric" key={m.label}>
-                        <div className="metric-top">
-                          {m.label}
-                          <m.icon size={16} />
-                        </div>
-                        <strong>{number(m.value)}</strong>
-                        <small>{m.sub}</small>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="overview-grid">
-                    <Panel
-                      title="Organic search trend"
-                      detail="A wider view of your visibility over time"
-                      action={
-                        <select
-                          aria-label="Chart date range"
-                          value={period}
-                          onChange={(e) => setPeriod(e.target.value)}
-                        >
-                          <option>12 months</option>
-                          <option>6 months</option>
-                        </select>
-                      }
-                    >
-                      <div className="chart-legend">
-                        <span />
-                        Organic traffic <Tag>Illustrative</Tag>
-                      </div>
-                      <Chart analysis={analysis} period={period} />
-                    </Panel>
-                    <Panel
-                      title="Your next move"
-                      detail="Build a more intentional search strategy"
-                    >
-                      <div className="next-art">
-                        <Compass size={58} strokeWidth={1} />
-                        <span className="orbit one" />
-                        <span className="orbit two" />
-                      </div>
-                      <h3 className="next-title">Find your room to grow.</h3>
-                      <p className="next-copy">
-                        Explore topics your audience cares about, then turn an
-                        idea into your next opportunity.
-                      </p>
-                      <button
-                        className="button primary full"
-                        onClick={() => navigate(1)}
-                      >
-                        Explore keywords <ArrowRight size={16} />
-                      </button>
-                    </Panel>
-                  </div>
-                  <div className="bottom-grid">
-                    <Panel
-                      title="Keyword highlights"
-                      detail="A few starting points for your research"
-                      action={
-                        <button
-                          className="text-button"
-                          onClick={() => {
-                            navigate(1);
-                            void research();
-                          }}
-                        >
-                          View research <ArrowRight size={14} />
-                        </button>
-                      }
-                    >
-                      <div className="table-wrap">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Keyword</th>
-                              <th>Position</th>
-                              <th>Volume</th>
-                              <th>Difficulty</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {analysis.topKeywords.slice(0, 5).map((k) => (
-                              <tr key={k.keyword}>
-                                <td>{k.keyword}</td>
-                                <td>
-                                  <span className="position">{k.position}</span>
-                                </td>
-                                <td>{number(k.volume)}</td>
-                                <td>
-                                  <span
-                                    className={`difficulty ${k.difficulty < 40 ? "easy" : ""}`}
-                                  />
-                                  {k.difficulty}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </Panel>
-                    <Panel
-                      title="Explore the landscape"
-                      detail="Illustrative competitors in your space"
-                    >
-                      <div className="competitor-list">
-                        {analysis.competitors.slice(0, 3).map((c, i) => (
-                          <div key={c.domain}>
-                            <span className={`site-avatar color-${i}`}>
-                              {c.domain[0].toUpperCase()}
-                            </span>
-                            <div>
-                              <strong>{c.domain}</strong>
-                              <small>{number(c.keywords)} keywords</small>
-                            </div>
-                            <span>
-                              {c.overlap}%<small>overlap</small>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        className="text-button landscape-link"
-                        onClick={() => navigate(5)}
-                      >
-                        Compare competitors <ArrowRight size={14} />
-                      </button>
-                    </Panel>
-                  </div>
-                </>
-              )}
-              {page === 1 && (
-                <Panel
-                  title="Discover keywords"
-                  detail="Generate repeatable demo suggestions from a seed phrase"
-                >
-                  <form className="inline-form" onSubmit={research}>
-                    <Search size={18} />
-                    <input
-                      aria-label="Seed keyword"
-                      value={query}
-                      minLength={2}
-                      maxLength={120}
-                      onChange={(e) => setQuery(e.target.value)}
-                      required
-                    />
-                    <button className="button primary" disabled={busy}>
-                      Find keywords
-                    </button>
-                  </form>
-                  <div className="table-tools">
-                    <label>
-                      <ListFilter size={15} />
-                      <select
-                        aria-label="Filter intent"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                      >
-                        {[
-                          "All intents",
-                          "Informational",
-                          "Commercial",
-                          "Transactional",
-                        ].map((x) => (
-                          <option key={x}>{x}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      className="text-button"
-                      disabled={!keywords.length}
-                      onClick={exportKeywords}
-                    >
-                      <ArrowDownToLine size={15} />
-                      Export CSV
-                    </button>
-                  </div>
-                  {keywords.length ? (
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Keyword</th>
-                            <th>Intent</th>
-                            <th>Volume</th>
-                            <th>Difficulty</th>
-                            <th>CPC (USD)</th>
-                            <th>Track</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {visibleKeywords.map((k) => (
-                            <tr key={k.keyword}>
-                              <td>{k.keyword}</td>
-                              <td>
-                                <Tag>{k.intent}</Tag>
-                              </td>
-                              <td>{number(k.volume)}</td>
-                              <td>{k.difficulty}/100</td>
-                              <td>${k.cpc.toFixed(2)}</td>
-                              <td>
-                                <button
-                                  aria-label={`Track ${k.keyword}`}
-                                  disabled={busy}
-                                  className="icon-button"
-                                  onClick={() =>
-                                    void run(() => track(k.keyword))
-                                  }
-                                >
-                                  <Plus size={16} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="empty">
-                      <Search size={30} />
-                      <h3>Every opportunity starts with a question.</h3>
-                      <p>
-                        Enter a topic above to explore synthetic keyword ideas.
-                      </p>
-                    </div>
-                  )}
-                </Panel>
-              )}
-              {page === 2 && (
-                <>
-                  <div className="metrics three">
-                    {[
-                      ["Backlinks", analysis.backlinks],
-                      ["Referring domains", analysis.referringDomains],
-                      [
-                        "Follow links in sample",
-                        analysis.links.filter((l) => l.follow).length,
-                      ],
-                    ].map(([label, value]) => (
-                      <div className="metric" key={label}>
-                        <div className="metric-top">{label}</div>
-                        <strong>{number(Number(value))}</strong>
-                        <small>Synthetic demo data</small>
-                      </div>
-                    ))}
-                  </div>
-                  <Panel
-                    title="Link explorer"
-                    detail="Original fictional sample links; strength is a demo score"
-                    action={
-                      <select
-                        aria-label="Link type"
-                        value={linkFilter}
-                        onChange={(e) => setLinkFilter(e.target.value)}
-                      >
-                        <option>All links</option>
-                        <option>Follow</option>
-                        <option>Nofollow</option>
-                      </select>
-                    }
-                  >
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Referring page / target</th>
-                            <th>Anchor text</th>
-                            <th>Type</th>
-                            <th>Strength</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {analysis.links
-                            .filter(
-                              (l) =>
-                                linkFilter === "All links" ||
-                                l.follow === (linkFilter === "Follow"),
-                            )
-                            .map((l) => (
-                              <tr key={l.source}>
-                                <td>
-                                  <strong>{l.source}</strong>
-                                  <small className="cell-sub">{l.target}</small>
-                                </td>
-                                <td>{l.anchor}</td>
-                                <td>
-                                  <Tag>{l.follow ? "Follow" : "Nofollow"}</Tag>
-                                </td>
-                                <td>{l.strength}/100</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </Panel>
-                </>
-              )}
-              {page === 3 && (
-                <div className="audit-grid">
-                  <Panel
-                    title="Check your page markup"
-                    detail="Paste HTML or inspect the editable sample. No website is fetched."
-                  >
-                    <label className="field-label" htmlFor="html">
-                      Page HTML (up to 900 KB)
-                    </label>
-                    <textarea
-                      id="html"
-                      value={html}
-                      maxLength={900000}
-                      onChange={(e) => setHtml(e.target.value)}
-                      spellCheck={false}
-                    />
-                    <div className="audit-actions">
-                      <button
-                        className="button primary"
-                        disabled={busy}
-                        onClick={() =>
-                          void run(async () =>
-                            setAudit(await api<Audit>("/audit", { html })),
-                          )
-                        }
-                      >
-                        <ShieldCheck size={16} />
-                        Run HTML audit
-                      </button>
-                      <button
-                        className="text-button"
-                        onClick={() => {
-                          setHtml(sampleHtml);
-                          setAudit(undefined);
-                        }}
-                      >
-                        Reset sample
-                      </button>
-                    </div>
-                    <p className="fine-print">
-                      Markup heuristics only. This does not crawl a site,
-                      execute scripts, test performance, or check HTTP headers.
-                    </p>
-                  </Panel>
-                  <Panel
-                    title="Audit findings"
-                    detail={
-                      audit
-                        ? `${audit.checks.length} checks · submitted HTML`
-                        : "Your results will appear here"
-                    }
-                  >
-                    {audit ? (
-                      <>
-                        <div className="audit-score">
-                          <strong>
-                            {audit.score}
-                            <span>/100</span>
-                          </strong>
-                          <div>
-                            Markup health
-                            <small>Equal-weight checklist score</small>
-                          </div>
-                        </div>
-                        <div className="audit-checks">
-                          {audit.checks.map((c) => (
-                            <div key={c.name}>
-                              <span className={c.passed ? "pass" : "fail"}>
-                                {c.passed ? (
-                                  <Check size={16} />
-                                ) : (
-                                  <X size={16} />
-                                )}
-                              </span>
-                              <div>
-                                <strong>
-                                  {c.name}{" "}
-                                  {!c.passed && (
-                                    <Tag
-                                      tone={
-                                        c.severity === "error" ? "red" : "amber"
-                                      }
-                                    >
-                                      {c.severity}
-                                    </Tag>
-                                  )}
-                                </strong>
-                                <p>{c.detail}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="empty">
-                        <ShieldCheck size={36} />
-                        <p>Make your next improvement a clear one.</p>
-                      </div>
-                    )}
-                  </Panel>
-                </div>
-              )}
-              {page === 4 && (
-                <Panel
-                  title="Your tracked keywords"
-                  detail="Stored in SQLite. Positions are deterministic demo values, with no scheduled refresh."
-                >
-                  <form
-                    className="inline-form wrap"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void run(async () => {
-                        await track(rankWord);
-                        setRankWord("");
-                      });
-                    }}
-                  >
-                    <input
-                      aria-label="Keyword to track"
-                      placeholder="Add a keyword…"
-                      required
-                      minLength={2}
-                      maxLength={120}
-                      value={rankWord}
-                      onChange={(e) => setRankWord(e.target.value)}
-                    />
-                    <select
-                      aria-label="Tracking country"
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                    >
-                      {["NZ", "US", "GB", "AU"].map((c) => (
-                        <option key={c}>{c}</option>
-                      ))}
-                    </select>
-                    <select
-                      aria-label="Tracking device"
-                      value={device}
-                      onChange={(e) => setDevice(e.target.value)}
-                    >
-                      <option value="desktop">Desktop</option>
-                      <option value="mobile">Mobile</option>
-                    </select>
-                    <button className="button primary" disabled={busy}>
-                      <Plus size={15} />
-                      Track keyword
-                    </button>
-                  </form>
-                  {ranks.length ? (
-                    <div className="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Keyword</th>
-                            <th>Country / device</th>
-                            <th>Position</th>
-                            <th>Change</th>
-                            <th>Added</th>
-                            <th>Remove</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {ranks.map((r) => (
-                            <tr key={r.id}>
-                              <td>{r.keyword}</td>
-                              <td>
-                                {r.country} · {r.device}
-                              </td>
-                              <td>
-                                <span className="position">{r.position}</span>
-                              </td>
-                              <td>— baseline</td>
-                              <td>
-                                {new Date(r.checked_at).toLocaleDateString()}
-                              </td>
-                              <td>
-                                <button
-                                  className="icon-button"
-                                  aria-label={`Remove ${r.keyword}`}
-                                  onClick={() =>
-                                    void run(async () => {
-                                      await api(
-                                        `/ranks/${r.id}`,
-                                        undefined,
-                                        "DELETE",
-                                      );
-                                      setRanks(
-                                        await api<Rank[]>(
-                                          `/ranks?projectId=${project!.id}`,
-                                        ),
-                                      );
-                                    })
-                                  }
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="empty">
-                      <Target size={34} />
-                      <h3>Give your research a destination.</h3>
-                      <p>
-                        Add a keyword to save a project and its first demo rank.
-                      </p>
-                    </div>
-                  )}
-                </Panel>
-              )}
-              {page === 5 && (
-                <Panel
-                  title="The competitive landscape"
-                  detail="Fictional domain benchmarks derived from your selected domain"
-                >
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Domain</th>
-                          <th>Demo traffic</th>
-                          <th>Demo keywords</th>
-                          <th>Keyword overlap</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analysis.competitors.map((c) => (
-                          <tr key={c.domain}>
-                            <td>
-                              <strong>{c.domain}</strong>
-                            </td>
-                            <td>{number(c.traffic)}</td>
-                            <td>{number(c.keywords)}</td>
-                            <td>
-                              <div className="overlap">
-                                <span style={{ width: `${c.overlap}%` }} />
-                              </div>
-                              {c.overlap}%
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="insight">
-                    <Sparkles size={19} />
-                    <div>
-                      <strong>Use overlap as a starting point.</strong>
-                      <p>
-                        A future live provider can compare shared keywords and
-                        identify content gaps. These demo percentages are
-                        illustrative.
-                      </p>
-                    </div>
-                  </div>
-                </Panel>
-              )}
-              {page === 6 && (
-                <Panel
-                  title="A clear, shareable snapshot"
-                  detail="Export your current domain analysis and saved rank baselines"
-                >
-                  <div className="report-card">
-                    <span className="report-icon">
-                      <FileChartColumn size={37} />
-                    </span>
-                    <div>
-                      <Tag>DEMO REPORT</Tag>
-                      <h3>{domain}</h3>
-                      <p>
-                        Domain overview · keyword highlights · link sample ·
-                        competitors · tracked ranks
-                      </p>
-                    </div>
-                    <button
-                      className="button primary"
-                      onClick={() => setReport(true)}
-                    >
-                      Build report <ArrowRight size={16} />
-                    </button>
-                  </div>
-                  {report && (
-                    <div className="report-preview">
-                      <div className="report-title">
-                        <div className="brand">waypoint.</div>
-                        <Tag>Synthetic search data</Tag>
-                      </div>
-                      <h2>Search performance snapshot</h2>
-                      <p>
-                        {domain} · Generated {new Date().toLocaleDateString()}
-                      </p>
-                      <div className="report-stats">
-                        <div>
-                          <strong>{number(analysis.traffic)}</strong>
-                          <small>Demo monthly visits</small>
-                        </div>
-                        <div>
-                          <strong>{number(analysis.keywords)}</strong>
-                          <small>Demo keywords</small>
-                        </div>
-                        <div>
-                          <strong>{ranks.length}</strong>
-                          <small>Saved rank baselines</small>
-                        </div>
-                      </div>
-                      <p>
-                        Research notes: validate keyword demand with a licensed
-                        data provider, review technical markup, and prioritize
-                        content aligned with audience intent.
-                      </p>
-                      <p className="fine-print">
-                        All search metrics are generated examples. This report
-                        does not establish real traffic, rankings, or backlinks.
-                        HTML audit findings are available separately in the
-                        audit view.
-                      </p>
-                      <div className="audit-actions">
-                        <button
-                          className="button primary"
-                          onClick={() =>
-                            void run(async () => {
-                              const data = await api(
-                                `/reports?domain=${encodeURIComponent(domain)}`,
-                              );
-                              download(
-                                `waypoint-${domain}-demo.json`,
-                                JSON.stringify(data, null, 2),
-                                "application/json",
-                              );
-                              setNotice("JSON report exported.");
-                            })
-                          }
-                        >
-                          <ArrowDownToLine size={15} />
-                          Export JSON
-                        </button>
-                        <button
-                          className="button secondary"
-                          onClick={() => window.print()}
-                        >
-                          Print / save PDF
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </Panel>
-              )}
-              {page === 7 && <SocialSeo domain={domain} claudeEnabled={claudeEnabled} onIntegrations={() => navigate(8)} />}
-              {page === 8 && <Integrations onClaudeChange={setClaudeEnabled} />}
-              {page < 7 && claudeEnabled && <button className="button secondary" onClick={() => setAdvisorOpen(!advisorOpen)}>{advisorOpen ? "Close Claude analysis" : "Analyze this tool with Claude"}<Sparkles size={15}/></button>}
-              {page < 7 && claudeEnabled && advisorOpen && (
-                <ClaudeAdvisor
-                  context={JSON.stringify({
-                    domain,
-                    tool: pages[page].name,
-                    analysis,
-                    audit: page === 3 ? audit : undefined,
-                    keywords: page === 1 ? keywords : undefined,
-                    ranks: page === 4 ? ranks : undefined,
-                  })}
-                />
-              )}
-            </>
-          )}
+          {page === 8 && <Integrations onClaudeChange={setClaudeEnabled} />}
           <footer>
             <span>
               <Compass size={13} />
               waypoint <span>Independent tools. Clearer decisions.</span>
             </span>
             <span>
-              Search + social intelligence <span className="tiny-dot" /> v0.4.0
+              Search + social intelligence <span className="tiny-dot" /> v0.5.0
             </span>
           </footer>
         </main>
       </div>
-      {tourOpen && <GuidedTour page={page} navigate={navigate} onClose={dismissIntroduction} />}
-      {notice && (
-        <div role="status" className="toast">
-          <Check size={17} />
-          {notice}
-        </div>
+      {tourOpen && (
+        <GuidedTour page={page} navigate={navigate} onClose={closeTour} />
       )}
       {help && (
-        <div className="modal-backdrop" onClick={() => setHelp(false)}>
+        <div className="modal-backdrop">
           <section
             role="dialog"
             aria-modal="true"
@@ -1249,18 +322,28 @@ export default function App() {
               <X size={20} />
             </button>
             <Compass size={36} />
-            <h2 id="help-title">A fresh perspective on search.</h2>
+            <h2 id="help-title">Start with your website and data.</h2>
             <p>
-              Waypoint combines web SEO tools with social performance analysis.
-              Import measured content and search-query data, compare similar content,
-              or use native public YouTube discovery when configured. Connect the whole toolkit to Claude as an optional plugin or MCP server.
+              Enter your domain and click Analyze website. It scans the homepage
+              and up to two internal pages for metadata, topics, links and
+              markup issues. Add authorized Google data for actual traffic and
+              search performance, or use optional Similarweb estimates for other
+              sites. You can also import query, backlink and ranking CSVs.
             </p>
             <p>
-              Web rankings and backlinks are
-              examples; the audit analyzes only the HTML you submit. Saved data
-              stays in your local SQLite database.
+              Social SEO uses your imports or configured account pulls. Use
+              Start-Claude-SEO.cmd on the host computer to work with the toolkit
+              through your Claude Code subscription. Claude can analyze the
+              available evidence; private analytics still require property
+              access and third-party estimates require a configured provider.
             </p>
-            <button className="button primary" onClick={() => { setHelp(false); setTourOpen(true); }}>
+            <button
+              className="button primary"
+              onClick={() => {
+                setHelp(false);
+                setTourOpen(true);
+              }}
+            >
               Start guided tour <ArrowRight size={16} />
             </button>
           </section>

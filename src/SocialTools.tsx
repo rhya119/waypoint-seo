@@ -17,12 +17,12 @@ const starterHtml = `<html><head>
 </head><body></body></html>`;
 export default function SocialTools({ domain }: { domain: string }) {
   const [tab, setTab] = useState('Share audit'); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
-  const [pageUrl, setPageUrl] = useState(`https://${domain}/journal`); const [html, setHtml] = useState(starterHtml.replaceAll('northstar.example', domain));
+  const [pageUrl, setPageUrl] = useState(domain ? `https://${domain}/` : ''); const [html, setHtml] = useState(starterHtml.replaceAll('northstar.example', domain));
   const [audit, setAudit] = useState<SocialAudit>(); const [preview, setPreview] = useState('Open Graph');
   const [meta, setMeta] = useState<SocialMetadata>({ pageUrl: `https://${domain}/journal`, title: 'Small spaces, greener living', description: 'Practical ideas for a thoughtful home, one small change at a time.', imageUrl: `https://${domain}/images/garden.jpg`, imageAlt: 'A sunlit balcony filled with leafy plants', siteName: 'Northstar journal', type: 'article', card: 'summary_large_image' });
   const [snippet, setSnippet] = useState(''); const [caption, setCaption] = useState('Sustainable living starts with the space you have. Try a balcony herb garden this weekend, and save this guide for your next small step. #SustainableLiving #SmallSpaces');
   const [keyword, setKeyword] = useState('sustainable living'); const [platform, setPlatform] = useState('Instagram'); const [review, setReview] = useState<CaptionReview>();
-  const [campaign, setCampaign] = useState({ url: `https://${domain}/journal`, source: 'instagram', medium: 'social', campaign: 'greener_living', content: 'balcony_guide' }); const [campaignUrl, setCampaignUrl] = useState('');
+  const [campaign, setCampaign] = useState({ url: domain ? `https://${domain}/` : '', source: 'instagram', medium: 'social', campaign: 'greener_living', content: 'balcony_guide' }); const [campaignUrl, setCampaignUrl] = useState('');
   async function run(task: () => Promise<void> | void) { setBusy(true); setError(''); setNotice(''); try { await task(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
   async function copy(text: string) { try { await navigator.clipboard.writeText(text); setNotice('Copied to clipboard.'); } catch { setError('Clipboard is unavailable. Select the text below or use Download.'); } }
   const context = JSON.stringify({ domain, source: 'submitted data and local checks', audit, caption: tab === 'Content planner' ? caption : undefined, keyword: tab === 'Content planner' ? keyword : undefined, captionReview: review, metadata: meta, campaignUrl, disclaimer: 'No social analytics, trending hashtag data, or live search observations are connected.' });

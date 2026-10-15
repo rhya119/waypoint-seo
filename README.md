@@ -2,9 +2,9 @@
 
 An independent, local-first SEO research toolkit. Original branding, UI, source code, and architecture; inspired only by broad product categories in the SEO industry.
 
-**Status: v0.4 native social pulls and a clickable introduction.** Social SEO analyzes daily post/query imports, similar content and account benchmarks. Seven official API adapters pull lifetime snapshots for Instagram, TikTok, LinkedIn organizations, Facebook Pages, X, Pinterest and Threads. YouTube public research is available separately. Web SEO index metrics remain synthetic. Claude is optional; no affiliation with Semrush.
+**Status: v0.5 — live public website scans, free SEO imports, optional provider data and a private Windows service.** Inspect public website markup immediately, then add your authorized Google data, supplied backlinks and observed ranks. Optional Similarweb integration supplies paid traffic estimates. Social SEO also supports daily imports and seven official lifetime account adapters. YouTube public research is separate. Claude is optional; no affiliation with Semrush.
 
-Start at **Social SEO**. Use **My data** for imported observations, or explicitly select **Explore example** for a labeled fictional dataset. An empty real workspace never silently substitutes example metrics. See [performance-data setup](docs/PERFORMANCE_DATA.md) and [optional Claude plugin](docs/PLUGIN.md).
+Start at **Domain overview**. Enter a public website and click **Analyze website**. Waypoint checks robots.txt, fetches the HTTPS homepage and up to two eligible internal pages, and shows actual titles, descriptions, headings, topics, links and static audit findings. **Use saved / imported data** opens your stored workspace without a new scan. Use **Import SEO data** for actual CSV observations. Public HTML does not reveal traffic, search rankings or inbound backlink coverage. The web workspace has no fictional demo option or preset domain. See [the free SEO workflow](docs/FREE_SEO.md), [social performance setup](docs/PERFORMANCE_DATA.md) and [optional Claude plugin](docs/PLUGIN.md).
 
 ## Run locally
 
@@ -25,26 +25,38 @@ npm run build
 npm start
 ```
 
-Open **http://127.0.0.1:4318**. The API serves the production frontend. This is an unauthenticated desktop/local application and deliberately refuses non-loopback `HOST` values. A private GitHub repository does not secure a hosted web application. Authentication and tenant isolation are roadmap work before network deployment.
+Open **http://127.0.0.1:4318**. The API serves the production frontend and binds only to loopback. For private access from your other devices, the optional Windows service uses **127.0.0.1:4321** behind **Tailscale Serve**. It accepts one configured private HTTPS hostname and authorized tailnet devices; there is no separate app password or per-user workspace. Keep the host powered on, awake and signed in. Automatic startup is configured separately on the host; cloning alone does not install it. Full reboot recovery has not been tested and no power policy was changed. See [private service setup, stop/update and access boundaries](docs/PRIVATE_SERVICE.md). Repository access does not grant service access.
 
 ## Included tools
 
 | Area | Working behavior | Data and limits |
 | --- | --- | --- |
-| Domain overview | Normalize a domain, view metrics and trend chart, switch date range, save projects | Synthetic metrics; the Jan–Dec 2026 series is explicitly illustrative |
-| Keyword research | Seed suggestions, intent filter, volume/difficulty/CPC columns, formula-safe CSV export, add tracking | Repeatable generated examples, not keyword index queries |
-| Backlink analysis | Referring/target pages, anchor text, follow/nofollow filtering | Fictional link sample and illustrative strength scores |
-| Site audit | Submit HTML; eight checks with explanations, severity, and a checklist score | Actual static markup inspection; no crawler, network fetching, script execution, robots.txt, HTTP headers, or performance testing |
-| Rank tracking | Save keywords per project/country/device; reload and remove baselines | Deterministic positions; no SERP fetching, daily jobs, or historical movement claims |
-| Competitor research | Traffic, keyword counts, and overlap comparison | Fictional comparison domains; no actual keyword-gap analysis |
-| Reporting | Preview a summary, export structured JSON, print/save PDF through browser | Includes provenance, analysis, and saved ranks; no scheduled delivery |
+| Domain overview | Live public site summary, query clicks/impressions/CTR when supplied, optional GA4 totals and separate traffic estimates | Sources and date scopes remain separate; public HTML reveals no private traffic |
+| Keyword research | Observed page topics plus supplied/authorized query performance; CSV export and watchlist | Topic frequency is not search volume; no global CPC/difficulty index |
+| Backlink analysis | Analyze supplied inbound link URLs and referring hosts; inspect scanned outbound links separately | Outbound page links are not inbound backlinks; no global link discovery |
+| Site audit | Automatic limited public scan plus optional pasted/uploaded HTML checks | Homepage + up to two internal pages, subject to robots and safety limits; static checklist, no JavaScript rendering or Core Web Vitals |
+| Rank tracking | Watchlist plus imported dated rank observations and previous-observation change | No generated positions or scheduled SERP checks; query average position stays separate |
+| Competitor research | Query-set overlap and potential gaps across imported domains | Matching declared dates and filter scope required; domain alone reveals no private competitor data |
+| Reporting | Combine saved scan, query snapshot, supplied links, ranks, audit and optional provider reports; JSON/keyword CSV/print | Sources, windows and limitations retained; browser PDF delivery depends on browser |
 | Social SEO | Daily performance trends; query impressions/clicks/CTR; topic-associated content; similar-post comparisons; account benchmarks; native YouTube research | Imports and normalized ingestion for eight platforms; seven official account adapters with separate lifetime snapshots; YouTube public discovery; no fabricated metrics |
 | Publishing utilities | Share metadata, caption checks and campaign links under a secondary expandable section | Local markup/editorial checks, no posting |
-| Integrations + optional Claude plugin | Optional in-app AI toggle; whole-platform plugin with three skills and 18 MCP tools; source-bundle download | All platform tools work without Claude; advisor needs a separate Anthropic key; MCP uses the client's own model access |
+| Integrations + optional Claude plugin | Whole-platform plugin with three skills and 21 MCP tools; source-bundle download; separate in-app advisor | Claude subscription runs in local Claude Code; web advisor requires its own Anthropic key |
 
-All `.example` names and sample content were authored for this project. Entered domain/image URLs are not fetched. Native research/account pulls use fixed official provider endpoints and keep lifetime snapshots separate from daily observations. Set up credentials under Integrations; see [all seven connection guides](docs/CONNECTIONS.md). Imported content/query observations, projects, rank baselines and integration settings persist in local SQLite; drafts and AI responses are temporary. Social reports export separately from web SEO demo reports. Clicking Ask Claude explicitly sends bounded context to Anthropic and may incur API charges.
+For Search Console, export **Performance → Search results → Queries** for your selected dates, then import the Queries CSV with that same window and filter scope. English native and canonical headers are supported. Query-table totals can omit anonymized/truncated queries and are not whole-site traffic or global search volume. Overlapping snapshots are never added together. See [formats, import limits and methodology](docs/FREE_SEO.md).
+
+All `.example` names and sample content were authored for this project. Only an explicit website scan fetches public page URLs; entering or selecting a domain alone does not fetch that website. Google and social pulls use fixed official endpoints; lifetime snapshots remain separate from daily observations. Set up credentials under Integrations; see [seven connection guides](docs/CONNECTIONS.md). Measured SEO datasets, saved HTML findings, social observations and settings persist in ignored local SQLite. Drafts and AI responses are temporary. Social reports export separately from web reports. An explicit Ask Claude action sends bounded context to Anthropic and may incur API charges.
+
+## Optional Google and traffic-estimate data
+
+The public scanner and imports need no provider key. For authorized first-party performance, add `GOOGLE_SEO_ACCESS_TOKEN` with `webmasters.readonly` and `analytics.readonly` scopes to ignored server `.env`. Optionally map a numeric `GA4_PROPERTY_ID` to `GA4_SITE_DOMAIN`. Restart, select dates and click **Pull Google data**. Search Console uses an authorized matching property; GA4 runs only for the matching configured domain. Tokens expire and there is no built-in refresh flow.
+
+For third-party traffic estimates, configure `SIMILARWEB_API_KEY`, restart, choose up to 12 complete calendar months and explicitly click **Fetch traffic estimates** in Overview/Reports. This can consume paid provider quota. Estimates remain labeled separately from GSC clicks and GA4 observed sessions. Provider coverage or account entitlement can leave metrics unavailable. Google/Similarweb credentials are not configured in the current workspace, so their live access remains unverified. See [setup and source boundaries](docs/FREE_SEO.md).
 
 ## Claude setup
+
+To use your **Claude subscription**, sign in to Claude Code with your eligible account and open **Start-Claude-SEO.cmd** on the host computer. It checks authentication, reuses the direct `waypoint` registration when present or loads the bundled plugin, and clears API-key/base-URL overrides only in its own process. It preserves `.env` and saved credentials. Plan limits still apply. Try: “Read my imported SEO report for mydomain.com and explain the next steps.” For CSVs, request a validation preview first, then explicitly request the import. Only `seo_import` writes data; the other 20 tools are read-only.
+
+Subscription access stays in local Claude Code. It is not a subscription-backed web API or remote web chat. [Detailed subscription and MCP setup](docs/CLAUDE.md).
 
 The optional advisor uses **Anthropic Claude**. Add `ANTHROPIC_API_KEY` to the ignored local `.env`, optionally change `ANTHROPIC_MODEL`, restart the server, and enable **Show Claude analysis** under **Integrations**. The default model is `claude-sonnet-5-5`; use a model your API account can access. No model call happens when enabling the toggle. Keys stay server-side.
 
@@ -70,14 +82,19 @@ This prints an absolute-path Desktop configuration and a project-scoped Claude C
 - React 19, TypeScript, Vite, Lucide icons, original responsive CSS and SVG charts.
 - Express 5, Zod request validation, Cheerio HTML inspection.
 - Node SQLite with prepared statements, foreign keys, and unique tracking constraints.
-- A `SeoProvider` interface keeps generated data separate from routes and UI. The current implementation is synchronous and demo-only. A live adapter should evolve this contract to asynchronous, typed responses with provenance, timestamps, market/device scope, caching, and missing-data states.
+- Measured query/link/rank snapshots and source-aware reports use `server/web-data.ts`, independently of the legacy demo `SeoProvider`. A future licensed index adapter needs asynchronous responses with provenance, scope, caching and missing-data states.
 
 ```text
 src/                 UI, API client, exports, original styles
 shared/types.ts      Shared response contracts
 server/app.ts        Validated local APIs and SQLite schema
 server/provider.ts   Demo provider and provider seam
+server/web-data.ts   Measured free SEO import snapshots and reports
+shared/web-data.ts   Validated web import/report contracts
 server/audit.ts      Pure static HTML checks
+server/site-scan.ts  Robots-aware bounded public HTTPS scanner
+server/google-data.ts Authorized first-party Search Console and GA4 reads
+server/traffic-estimates.ts Optional paid Similarweb traffic estimates
 server/social.ts     Social markup parser and checklist
 server/claude.ts     Server-only Claude API adapter
 server/performance.ts CSV/JSON ingestion, SQLite analysis, comparisons
@@ -90,7 +107,7 @@ skills/              Whole-platform Claude workflow skills
 .claude-plugin/      Optional Claude Code plugin manifest
 server/index.ts      Environment setup, database, local server
 tests/               Domain, provider, audit, API and CSV checks
-scripts/             Private GitHub push and REA browser QA helpers
+scripts/             Private service, Claude launcher, GitHub and REA QA helpers
 docs/                Architecture, clean-room record, roadmap, validation
 ```
 
@@ -101,10 +118,15 @@ docs/                Architecture, clean-room record, roadmap, validation
 | `HOST` | `127.0.0.1` | Loopback only |
 | `PORT` | `4318` | API / production frontend port |
 | `DATABASE_PATH` | `./data/waypoint.sqlite` | Durable local database, relative to project directory |
-| `SEO_PROVIDER` | `demo` | Only supported provider; other values fail startup |
+| `SEO_PROVIDER` | `demo` | Legacy fictional provider only; measured `/api/web/*` routes are independent |
+| `WAYPOINT_PRIVATE_ORIGIN` | empty | One HTTPS `.ts.net` origin, set by the private-service launcher |
 | `ANTHROPIC_API_KEY` | empty | Server-only Anthropic key for AI advice |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5-5` | Configurable Claude API model ID |
 | `YOUTUBE_API_KEY` | empty | Optional native public YouTube discovery key |
+| `GOOGLE_SEO_ACCESS_TOKEN` | empty | Authorized Google OAuth access token for read-only Search Console/GA4 |
+| `GA4_PROPERTY_ID` | empty | Optional numeric Analytics property ID |
+| `GA4_SITE_DOMAIN` | empty | Exact normalized domain mapped to that GA4 property |
+| `SIMILARWEB_API_KEY` | empty | Optional paid Similarweb API access for explicit traffic-estimate requests |
 
 Native account pulls also require the provider-specific token/account/version names in [.env.example](.env.example). See [connection requirements and metric definitions](docs/CONNECTIONS.md). Restart the server after changing them. There is no embedded OAuth login service or automatic token refresh.
 
@@ -115,6 +137,17 @@ Native account pulls also require the provider-specific token/account/version na
 | Method | Endpoint | Input |
 | --- | --- | --- |
 | GET | `/api/health` | — |
+| GET | `/api/web/domains` | Domains with saved data |
+| POST | `/api/web/scan` | `{ "domain": "example.com" }`; explicit bounded public scan |
+| GET | `/api/web/connections` | Sanitized Google and traffic-estimate configuration flags |
+| POST | `/api/web/google` | `{ "domain": "example.com", "from": "2026-09-01", "to": "2026-09-30" }`; authorized first-party reads |
+| POST | `/api/web/traffic-estimates` | Same domain/date shape; explicit paid estimate request for up to 12 complete calendar months |
+| GET | `/api/web/report?domain=example.com` | Measured report; optional query `datasetId` selects a query snapshot |
+| POST | `/api/web/import/preview` | `domain`, `kind: search/backlinks/ranks`, `from`, `to`, `source`, `scope`, `csv`; validates without writes |
+| POST | `/api/web/import` | Revalidate and atomically save the same import |
+| DELETE | `/api/web/datasets/:id` | Remove only matching snapshot; body includes `domain` |
+| POST / DELETE | `/api/web/track` | Add/remove watchlist entry without inventing a position |
+| POST | `/api/web/audit` | `{ "domain": "example.com", "html": "<html>...</html>" }`; save actual findings |
 | GET / POST | `/api/projects` | POST `{ "domain": "example.com" }` |
 | GET | `/api/analysis?domain=example.com` | Domain or HTTP(S) URL |
 | GET | `/api/keywords?query=gardening` | Seed, 2–120 characters |
@@ -141,7 +174,7 @@ Native account pulls also require the provider-specific token/account/version na
 | PUT | `/api/integrations/claude` | `{ "enabled": true/false }`, persisted opt-in |
 | GET | `/api/integrations/plugin` | Download prepared source bundle |
 
-Supported tracking countries: NZ, US, GB, AU; devices: desktop, mobile. Validation failures return 400, unknown project 404, cross-origin browser writes 403, oversized requests 413. Duplicate saved domains and tracking tuples reuse existing rows.
+The normal measured workspace uses `/api/web/*`. Legacy analysis/keyword/project/rank/report routes above remain only for example API compatibility; the normal UI and MCP web tools do not use them. Health/source flags describe configured data paths, not dataset completeness or successful provider authorization. Free rank imports support supplied country scope and `all`, `desktop`, `mobile` or `tablet` devices; see [the validated formats](docs/FREE_SEO.md). Validation failures return 400, unknown project 404, unapproved browser origins 403, oversized requests 413. Duplicate saved domains and tracking tuples reuse existing rows.
 
 ## Verification
 
@@ -149,7 +182,7 @@ Supported tracking countries: NZ, US, GB, AU; devices: desktop, mobile. Validati
 npm run check
 ```
 
-Runs meaningful tests followed by TypeScript checking and a production build. CI runs the same command on Node 24. Tests use an in-memory database and do not change workspace data.
+Runs meaningful tests followed by TypeScript checking and a production build. CI runs the same command on Node 24. Tests isolate fixtures from workspace data. Fixture coverage does not establish live provider access; see [verification evidence and limits](docs/VALIDATION.md).
 
 For optional **REA** browser QA, start `npm start` after a build, then:
 
@@ -178,7 +211,7 @@ gh repo view --json url,isPrivate
 
 ## Next steps
 
-See the [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), and [clean-room research record](docs/CLEAN_ROOM.md). Live SEO datasets, crawler infrastructure, production identity, and background jobs remain deliberate next milestones.
+See the [roadmap](docs/ROADMAP.md), [architecture](docs/ARCHITECTURE.md), and [clean-room research record](docs/CLEAN_ROOM.md). Licensed index datasets, crawler infrastructure, multi-user identity and scheduled jobs remain future milestones. The current private Tailscale service shares one local workspace.
 
 ## Ownership
 
