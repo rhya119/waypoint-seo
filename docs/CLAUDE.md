@@ -1,6 +1,6 @@
 # Claude API and local connector
 
-Waypoint supports two optional paths: the web UI calls Anthropic's Claude API for advice after opt-in, and Claude clients use the whole platform through a local plugin or direct MCP connection. No other AI provider is implemented. See [plugin choices](PLUGIN.md) for the v0.3 package and its 17 tools.
+Waypoint supports two optional paths: the web UI calls Anthropic's Claude API for advice after opt-in, and Claude clients use the whole platform through a local plugin or direct MCP connection. No other AI provider is implemented. See [plugin choices](PLUGIN.md) for the v0.4 package and its 18 tools.
 
 ## Built-in advisor
 

@@ -11,6 +11,8 @@ import { performanceFilters } from '../shared/performance.js';
 import { createYouTubeProvider, youtubeInput, YouTubeError, type YouTubeProvider } from './youtube.js';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
+import { createSocialConnectors, initSnapshots, readSnapshots, savePull, ConnectorError, type SocialConnectors } from './connectors.js';
+import { nativePlatform, pullInput, snapshotFilters } from '../shared/connectors.js';
 export function normalizeDomain(value: string): string {
   const url = new URL(value.includes('://') ? value : `https://${value}`);
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port || !url.hostname.includes('.') || !/^[a-z0-9.-]+$/i.test(url.hostname)) throw new Error('Enter a valid domain, such as example.com.');
@@ -19,8 +21,9 @@ export function normalizeDomain(value: string): string {
 const domainSchema = z.string().trim().max(253).transform((value, ctx) => {
   try { return normalizeDomain(value); } catch { ctx.addIssue({ code: 'custom', message: 'Enter a valid HTTP(S) domain.' }); return z.NEVER; }
 });
-export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService(), youtube: YouTubeProvider = createYouTubeProvider()) {
+export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService(), youtube: YouTubeProvider = createYouTubeProvider(), connectors: SocialConnectors = createSocialConnectors()) {
   initPerformance(db);
+  initSnapshots(db);
   db.exec(`PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS projects(id INTEGER PRIMARY KEY, domain TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS ranks(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), keyword TEXT NOT NULL, country TEXT NOT NULL, device TEXT NOT NULL, position INTEGER NOT NULL, previous INTEGER NOT NULL, checked_at TEXT NOT NULL, provenance TEXT NOT NULL DEFAULT 'demo', UNIQUE(project_id,keyword,country,device));`);
@@ -84,9 +87,11 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   app.post('/api/social/import', (req, res) => { const input = importInput.parse(req.body); res.json(saveImport(db, input.kind, parseImport(input.kind, input.csv))); });
   app.post('/api/social/ingest', (req, res) => { const input = ingestInput.parse(req.body); res.json(saveImport(db, input.kind, validateImport(input.kind, input.rows))); });
   app.post('/api/social/research/youtube', async (req, res) => res.json(await youtube.research(youtubeInput.parse(req.body))));
+  app.get('/api/social/snapshots', (req, res) => res.json(readSnapshots(db, snapshotFilters.parse(req.query))));
+  app.post('/api/social/pull/:platform', async (req, res) => { const platform = nativePlatform.parse(req.params.platform); const input = pullInput.parse(req.body); res.json(savePull(db, await connectors.pull(platform, input.maxPosts))); });
   app.get('/api/integrations', (_req, res) => res.json({
     claude: { ...claude.status(), enabled: (db.prepare('SELECT value FROM settings WHERE key=?').get('claude_enabled') as { value: string } | undefined)?.value === 'true' },
-    youtube: youtube.status(), platforms: ['youtube', 'instagram', 'tiktok', 'linkedin', 'facebook', 'x', 'pinterest', 'threads'].map(platform => ({ platform, import: true, ingestionApi: true, nativeApi: platform === 'youtube' })),
+    youtube: youtube.status(), connections: connectors.status(), platforms: ['youtube', 'instagram', 'tiktok', 'linkedin', 'facebook', 'x', 'pinterest', 'threads'].map(platform => ({ platform, import: true, ingestionApi: true, nativeApi: true })),
     plugin: { available: true, name: 'waypoint-seo', mode: 'optional-local-plugin', autoInstalled: false },
   }));
   app.put('/api/integrations/claude', (req, res) => { const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body); db.prepare('INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('claude_enabled', String(enabled)); res.json({ enabled }); });
@@ -98,7 +103,7 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   });
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'API route not found.' }); });
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    if (error instanceof PerformanceError || error instanceof YouTubeError) { res.status(error.status).json({ error: error.message }); return; }
+    if (error instanceof PerformanceError || error instanceof YouTubeError || error instanceof ConnectorError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof ClaudeError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof z.ZodError) { res.status(400).json({ error: error.issues[0]?.message || 'Invalid request.' }); return; }
     const status = (error as { status?: number }).status;

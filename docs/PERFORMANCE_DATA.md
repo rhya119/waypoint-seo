@@ -7,7 +7,7 @@ Social SEO is now a performance workspace. It provides overview trends, query-le
 | Platform | CSV / normalized JSON ingestion | Native integration in this release |
 | --- | --- | --- |
 | YouTube | Yes | Public keyword discovery + video statistics using your API key |
-| Instagram, TikTok, LinkedIn, Facebook, X, Pinterest, Threads | Yes | Direct account OAuth/sync not implemented |
+| Instagram, TikTok, LinkedIn, Facebook, X, Pinterest, Threads | Yes | Official token-based account pulls with separate lifetime snapshots; see [setup](CONNECTIONS.md) |
 
 Import only observations you obtained legitimately from exports, authorized APIs or public sources. Private competitor metrics are not available merely because a competitor account exists. A JSON ingestion endpoint is a data path for **your existing authorized API workflow**, not a claim that Waypoint already implements each platform's OAuth client.
 
@@ -26,7 +26,7 @@ Required columns: `platform,account,content_id,date,published_at,title,format,ow
 - `keywords`: your explicit topic tags separated by `|`. Topics can overlap.
 - `format`: your consistent label such as `video`, `short video`, `carousel`, `post`, or `pin`.
 
-Each metric must be a **daily increment**, not a lifetime snapshot or an entire date-range total repeated on each day. If your export contains cumulative totals, transform it correctly before importing; do not confirm daily basis otherwise. Native public YouTube results remain separate because they are lifetime counters.
+Each metric must be a **daily increment**, not a lifetime snapshot or an entire date-range total repeated on each day. If your export contains cumulative totals, transform it correctly before importing; do not confirm daily basis otherwise. Native API snapshots and public YouTube results remain separate because they are lifetime counters. Never import those captures as daily increments.
 
 Validate & preview before importing. The whole file must pass validation before an atomic transaction runs. Reimporting the same platform/account/content/day replaces that observation rather than adding it twice. Duplicate identities within a single file are rejected. Up to 10,000 rows / 900 KB CSV / 1 MB JSON body per import; local analysis supports up to 100,000 observations in each dataset. Oversized analyses fail explicitly rather than silently truncating.
 
@@ -71,10 +71,14 @@ Use `kind: queries` with query fields for search data. Unknown metrics can be om
 
 Set `YOUTUBE_API_KEY` in the server's ignored `.env`, enable the YouTube Data API for that key, restart the server and open **Live research**. Requests call the fixed official `search.list` and `videos.list` endpoints. Searches return a bounded sample (up to 12 videos), ordered by relevance, view count or recency. Provider requests consume quota and are rate-limited locally.
 
-Results show public lifetime views, likes, comments, publication date and lifetime views per day of age (minimum one day). Missing counters remain unknown. This is **not** keyword search volume, a comprehensive SERP index, daily growth, private impressions, retention, or competitor reach. Native account authorization/private Analytics API sync is not implemented here. The live adapter was tested with mocked official response shapes; a live call requires your own configured key.
+Results show public lifetime views, likes, comments, publication date and lifetime views per day of age (minimum one day). Missing counters remain unknown. This is **not** keyword search volume, a comprehensive SERP index, daily growth, private impressions, retention, or competitor reach. YouTube private Analytics API sync is not implemented here. The other seven platforms have separate [native account pulls](CONNECTIONS.md). The live adapter was tested with mocked official response shapes; a live call requires your own configured key.
 
 Primary references: [YouTube search.list](https://developers.google.com/youtube/v3/docs/search/list), [YouTube videos.list](https://developers.google.com/youtube/v3/docs/videos/list), [YouTube Analytics metric definitions](https://developers.google.com/youtube/analytics/metrics).
 
 ## Storage and exports
 
 Observations persist in ignored local SQLite tables `social_observations` and `social_queries`; complete parsed row payloads include captions/topic tags. The main dataset is workspace-wide, independent of the web-domain toolbar. Social JSON reports contain source selection, dates, totals, comparisons, query history, coverage and analysis limitations. No posting or messages are sent. Claude analysis is optional under Integrations; the plugin provides read-only access to this same data when pointed at the same database.
+
+## API snapshot workspace
+
+Open **API snapshots** for the seven official account adapters. Its own platform/topic filters apply to saved lifetime counters, independently of the daily workspace source/date filters. The latest capture per post is displayed, with capture dates and run warnings. Repeated pulls never double count daily metrics or supply query-level search demand. See [connection setup and metric mappings](CONNECTIONS.md).

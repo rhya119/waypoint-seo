@@ -1,3 +1,4 @@
+import NativePerformance from "./NativePerformance";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowDownToLine,
@@ -191,6 +192,7 @@ export default function SocialSeo({
         <div className="performance-intro-actions">
           <button
             className="button secondary"
+            data-tour="import-data"
             onClick={() => setImportOpen(true)}
           >
             <FileUp size={15} />
@@ -205,7 +207,7 @@ export default function SocialSeo({
           </button>
         </div>
       </div>
-      <div className="performance-source">
+      <div className="performance-source" style={{ display: tab === "API snapshots" ? "none" : undefined }}>
         <div>
           <span
             className={`source-dot ${dataset === "example" ? "example" : ""}`}
@@ -233,6 +235,7 @@ export default function SocialSeo({
           </button>
           <button
             aria-pressed={dataset === "example"}
+            data-tour="example-data"
             className={dataset === "example" ? "selected" : ""}
             onClick={() => setDataset("example")}
           >
@@ -240,7 +243,7 @@ export default function SocialSeo({
           </button>
         </div>
       </div>
-      <div className="performance-filter">
+      <div className="performance-filter" style={{ display: tab === "API snapshots" ? "none" : undefined }}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -249,6 +252,7 @@ export default function SocialSeo({
         >
           <Search size={17} />
           <input
+            data-tour="social-search"
             aria-label="Search social keyword"
             value={term}
             onChange={(e) => setTerm(e.target.value)}
@@ -308,9 +312,11 @@ export default function SocialSeo({
           "Similar content",
           "Competitors",
           "Live research",
+          "API snapshots",
         ].map((name) => (
           <button
             key={name}
+            data-tour={`tab-${name.toLowerCase().replaceAll(" ", "-")}`}
             aria-pressed={tab === name}
             className={tab === name ? "selected" : ""}
             onClick={() => setTab(name)}
@@ -319,14 +325,16 @@ export default function SocialSeo({
           </button>
         ))}
         <button
+          data-tour="export-report"
           className="text-button performance-export"
           onClick={exportReport}
-          disabled={!hasData}
+          disabled={!hasData || tab === "API snapshots"}
         >
           <ArrowDownToLine size={14} />
           Export
         </button>
       </div>
+      {tab === "API snapshots" && <NativePerformance onConnect={onIntegrations} claudeEnabled={claudeEnabled} />}
       {error && (
         <p role="alert" className="social-error">
           {error}
@@ -337,13 +345,13 @@ export default function SocialSeo({
           {notice}
         </p>
       )}
-      {dataset === "example" && (
+      {dataset === "example" && tab !== "API snapshots" && (
         <p className="example-disclosure">
           EXAMPLE DATA — these figures are fictional. Import or connect data to
           assess real performance.
         </p>
       )}
-      {tab !== "Live research" && !hasData && (
+      {tab !== "Live research" && tab !== "API snapshots" && !hasData && (
         <div className="performance-empty">
           <div className="performance-empty-art">
             <BarChart3 size={43} />
@@ -899,13 +907,14 @@ export default function SocialSeo({
             </div>
           )}
           <p className="performance-note">
-            Instagram, TikTok, LinkedIn, Facebook, X, Pinterest and Threads
-            currently support CSV/JSON ingestion. Native account authorization
-            and direct sync for those platforms are not implemented.
+            For Instagram, TikTok, LinkedIn organizations, Facebook Pages, X,
+            Pinterest and Threads, configure native account pulls in Integrations
+            and view the results under API snapshots. Daily CSV/JSON imports
+            remain available for all eight platforms.
           </p>
         </Panel>
       )}
-      {performance && hasData && (
+      {performance && hasData && tab !== "API snapshots" && (
         <div className="performance-methods">
           <span>
             <Check size={13} />
@@ -918,7 +927,7 @@ export default function SocialSeo({
           </p>
         </div>
       )}
-      {claudeEnabled && (
+      {claudeEnabled && tab !== "API snapshots" && (
         <div className="optional-ai">
           <button
             className="button secondary"

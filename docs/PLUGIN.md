@@ -4,7 +4,7 @@ Waypoint can run as a standalone dashboard, a direct MCP connector, or a Claude 
 
 ## Choose one connection style
 
-**Claude Code plugin** bundles three workflow skills and one local MCP server with 17 tools. From an authenticated clone of this private repository:
+**Claude Code plugin** bundles three workflow skills and one local MCP server with 18 tools. From an authenticated clone of this private repository:
 
 ```powershell
 npm ci
@@ -37,6 +37,7 @@ No provider credentials are required for local analysis. Native YouTube discover
 | Technical SEO | `site_audit` | Actual submitted-HTML analysis |
 | Ranks and reports | `rank_tracking`, `seo_report`, `read_workspace` | Saved demo rank baselines and domain examples |
 | Social performance | `social_performance`, `social_keywords`, `similar_content`, `performance_report` | Actual imported daily observations, or explicitly selected fictional examples |
+| Saved API snapshots | `social_api_snapshots` | Latest saved official lifetime counters for seven platforms; read-only, no pull |
 | Native discovery | `youtube_research` | Live public lifetime video statistics when configured |
 | Publishing utilities | `social_audit`, `social_meta_tags`, `social_caption_review`, `campaign_link` | Local markup/editorial/URL checks, no posting |
 
@@ -51,3 +52,5 @@ npm run plugin:package
 This creates `artifacts/waypoint-seo.plugin`, a ZIP-format **source bundle** that the Integrations page can download. Extract it to a folder, run `npm ci`, then use `claude --plugin-dir .`. It is not a remotely hosted claude.ai connector, a one-click verified Claude Desktop extension, or a precompiled binary. The bundle includes the web app, MCP server, skills, docs and tests. It excludes credentials, `.env`, SQLite files, imported data, captures, dependencies and Git metadata. The `.env.example` contains placeholders only.
 
 The current environment is Windows/Codex rather than Cowork, so the bundle is delivered as a local download; no Cowork rich-preview installation was attempted. Plugin setup follows [Claude Code's native plugin format](https://code.claude.com/docs/en/plugins-reference). No new Claude plugins were installed globally by this change.
+
+Native account pulls are explicit actions in the app. The plugin reads their saved lifetime snapshots through `social_api_snapshots` with platform/topic filters. It does not receive provider tokens or initiate account sync. See [native connections](CONNECTIONS.md).

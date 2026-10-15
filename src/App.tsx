@@ -29,6 +29,7 @@ import { api, csv, download, number } from "./lib";
 import SocialSeo from "./SocialSeo";
 import ClaudeAdvisor from "./ClaudeAdvisor";
 import Integrations from "./Integrations";
+import GuidedTour from "./GuidedTour";
 
 const pages = [
   {
@@ -182,6 +183,9 @@ export default function App() {
     const found = pages.findIndex(p => p.name.toLowerCase().replaceAll(" ", "-") === location.hash.slice(1));
     return found < 0 ? 7 : found;
   });
+  const [tourOpen, setTourOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => { try { return localStorage.getItem('waypoint-tour-v1') !== 'seen'; } catch { return true; } });
+  function dismissIntroduction() { setTourOpen(false); setShowWelcome(false); try { localStorage.setItem('waypoint-tour-v1', 'seen'); } catch { /* Storage may be disabled. */ } }
   const [claudeEnabled, setClaudeEnabled] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
   useEffect(() => { document.querySelector('nav button[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }, [page]);
@@ -345,6 +349,7 @@ export default function App() {
           {pages.map((p, i) => (
             <button
               key={p.name}
+              data-tour={`nav-${i}`}
               onClick={() => navigate(i)}
               className={page === i ? "active" : ""}
               aria-current={page === i ? "page" : undefined}
@@ -390,6 +395,7 @@ export default function App() {
             <span className="demo-dot" />
             {page < 7 ? "Web SEO demo data" : "Local performance workspace"} <span className="divider" />{" "}
             <button onClick={() => navigate(8)}><Plug size={15}/>Integrations</button>
+            <button className="tour-start" onClick={() => { setHelp(false); setTourOpen(true); }}><Compass size={15}/>Take a tour</button>
             <button aria-label="Help" onClick={() => setHelp(true)}>
               <CircleHelp size={18} />
             </button>
@@ -397,6 +403,7 @@ export default function App() {
           </div>
         </header>
         <main>
+          {showWelcome && !tourOpen && <section className="tour-welcome"><div><strong>Welcome to Waypoint.</strong><p>Let us show you which buttons to click, from your first keyword to connected account data.</p></div><div><button className="button primary" onClick={() => setTourOpen(true)}>Start guided tour <ArrowRight size={14}/></button><button className="icon-button" aria-label="Dismiss introduction" onClick={dismissIntroduction}><X size={16}/></button></div></section>}
           <div className="page-heading">
             <div>
               <div className="eyebrow">YOUR SEARCH WORKSPACE</div>
@@ -1213,11 +1220,12 @@ export default function App() {
               waypoint <span>Independent tools. Clearer decisions.</span>
             </span>
             <span>
-              Search + social intelligence <span className="tiny-dot" /> v0.3.0
+              Search + social intelligence <span className="tiny-dot" /> v0.4.0
             </span>
           </footer>
         </main>
       </div>
+      {tourOpen && <GuidedTour page={page} navigate={navigate} onClose={dismissIntroduction} />}
       {notice && (
         <div role="status" className="toast">
           <Check size={17} />
@@ -1248,12 +1256,12 @@ export default function App() {
               or use native public YouTube discovery when configured. Connect the whole toolkit to Claude as an optional plugin or MCP server.
             </p>
             <p>
-              No paid data provider is connected. Rankings and backlinks are
+              Web rankings and backlinks are
               examples; the audit analyzes only the HTML you submit. Saved data
               stays in your local SQLite database.
             </p>
-            <button className="button primary" onClick={() => setHelp(false)}>
-              Back to my workspace <ArrowRight size={16} />
+            <button className="button primary" onClick={() => { setHelp(false); setTourOpen(true); }}>
+              Start guided tour <ArrowRight size={16} />
             </button>
           </section>
         </div>

@@ -24,7 +24,7 @@ These controls support a single-user local scaffold. They do not replace identit
 
 `server/claude.ts` is the only AI provider adapter. The server injects it into the API at startup using `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`. Tests inject an isolated transport to verify the actual SDK request contract without making paid network calls. Missing keys and failed requests return explicit errors, never mock recommendations. The UI renders responses as text and discards responses if the workspace context changed during a request.
 
-`mcp/index.ts` serves stdio using the official MCP SDK and 17 read-only tools. It reserves stdout for protocol traffic and opens SQLite read-only for workspace/performance reads. Only explicit native YouTube discovery has network access. It neither starts the HTTP API nor calls Anthropic. The optional Claude Code plugin packages three workflow skills with this same server; a tested single-process launcher avoids orphan child servers. Claude clients provide their own model access. The in-app advisor is off by default and must be enabled in persisted settings before API requests are accepted. See [plugin setup](PLUGIN.md) and [performance methodology](PERFORMANCE_DATA.md).
+`mcp/index.ts` serves stdio using the official MCP SDK and 18 read-only tools. It reserves stdout for protocol traffic and opens SQLite read-only for workspace/performance reads. Only explicit native YouTube discovery has network access. It neither starts the HTTP API nor calls Anthropic. The optional Claude Code plugin packages three workflow skills with this same server; a tested single-process launcher avoids orphan child servers. Claude clients provide their own model access. The in-app advisor is off by default and must be enabled in persisted settings before API requests are accepted. See [plugin setup](PLUGIN.md) and [performance methodology](PERFORMANCE_DATA.md).
 
 ## Future provider contract
 
@@ -33,3 +33,9 @@ Replace `demoProvider` behind `SeoProvider`, evolving methods to Promises and re
 ## Delivery
 
 Vite compiles only browser code. `npm start` runs the TypeScript server using tsx and serves `dist`. Keep dev dependencies available for this local runtime; `npm ci --omit=dev` is not supported by this scaffold. CI runs tests and build. The repository contains no user databases, secrets, raw reference captures or generated bundles. GitHub privacy is independent of application runtime access.
+
+## Native snapshots and introduction (0.4)
+
+`shared/connectors.ts` defines seven native provider contracts. `server/connectors.ts` uses fixed API origins, bearer headers, bounded pagination/deadlines, sanitized failures, nullable metrics and explicit capability notes. `social_pull_runs` and `social_snapshots` are additive SQLite tables; whole successful pulls commit atomically. Latest-per-post reads use a window function, never sum cumulative snapshots or mix them into daily observations. Configured tokens are read only on server startup.
+
+`NativeConnections` provides manual pull/setup controls in Integrations; `NativePerformance` provides a separate lifetime panel in Social SEO with topic filtering, lexical comparisons and exports. MCP exposes only saved snapshot reads. `GuidedTour` spotlights real controls with click-to-advance navigation, Back/Next/Skip/Escape, focus restoration, responsive placement and browser-local introduction dismissal. It never triggers a pull or AI action.

@@ -2,6 +2,26 @@
 
 Completed 2026-10-16 on Windows with Node 24.19.0 and npm 12.0.2.
 
+## v0.4 — Seven native account adapters and clickable introduction
+
+`npm run check` passes **38 tests**, TypeScript checking and the production build. Added official-response-shaped fixtures cover all seven platform mappings, unsupported/null metrics, fixed-origin cursor pagination, latest-per-post capture selection without double counting, separation from daily imports, missing/invalid setup, cooldowns, provider body errors, partial X failures, sanitized errors, HTTP validation and atomic persistence. Meta authentication/rate-limit codes returned with HTTP 400 abort optional insight reads correctly. Both actual stdio entry points discover 18 read-only tools; `social_api_snapshots` returns an empty source-labeled result when no database exists. Plugin packaging excludes credentials, SQLite, dependencies and capture artifacts.
+
+REA 6.4.0 ran against an isolated server on port 4320 and an ignored QA-only database. Normal user data was not seeded. All scenarios below completed with zero page-error events:
+
+| Scenario | Evidence | Result |
+| --- | --- | --- |
+| Full clickable tour, desktop 1440 × 1080 | `ev_56636d1b32d3166be0b744efce8a318bea4fbf8e4e0ac5a6bb6bd169c1f9431b` | 42 steps, including all 15 tour stages, actual navigation/tab clicks, Back/Next, Finish, replay, close, seven connection cards |
+| Full clickable tour, phone 390 × 844 | `ev_e967fb0acb2db77268b73f8dad27c0820abe95ad590d25d8e319ecd26a9ecf57` | Same complete flow at phone width |
+| Lifetime snapshots with explicit synthetic QA rows | `ev_ddc100503395a9a44cb87f7da2651f21ac53c2c3ca662c0b70aded8a4855f012` | Topic filtering, similar-post comparison and pull-history warning display |
+| Desktop coachmark visual capture | `ev_55b5ad6fcf766e4c873ddb71916f70433c04608049adeaa1fb0f9a94d54ae345` | Actual example button highlighted; readable instructions and navigation visually inspected |
+| Phone coachmark visual capture | `ev_cd7e24702e7577919166191d1add3b6bf599cb0b99bf180222a6e9b40b5a7fd1` | Bottom coachmark and highlighted button visually inspected at 390 px |
+
+Early tour runs exposed click-listener timing and cross-page navigation races. The corrected implementation waits for the current target and lets the clicked navigation action finish before advancing. The full desktop and phone scenarios then passed. Snapshot screenshots were also visually inspected. Browser export file delivery, keyboard-only/screen-reader navigation and real account permissions were not established by these runs.
+
+All seven native account configurations currently report `configured: false` in the normal local app. No provider tokens were supplied and no live account pulls were made. The adapters require each provider's authorized tokens, scopes, account IDs, app approval and supported API versions. This release uses manual token configuration; embedded OAuth, automatic refresh, scheduled sync and multi-account credential storage remain future work. Facebook only pulls published Page post interactions; LinkedIn only supports organization posts. Per-provider mappings and limits are documented in [CONNECTIONS.md](CONNECTIONS.md).
+
+The following version sections are historical validation records.
+
 ## v0.3 — Performance redesign and optional whole-platform plugin
 
 The automated suite now includes **24 tests**: CSV quoting/multiline input, duplicates, invalid metrics/dates, atomic import rejection, replacement rather than double-counting, SQLite reopen persistence, missing-value/rate math, paired CTR denominators, topic/query separation, similarity scope, date filters and comparison coverage, local ingestion, default-off Claude settings, fixed-endpoint YouTube request/response fixtures, whole-platform stdio tools, plugin launcher lifecycle and bundle exclusions. Tests do not make live Claude or YouTube calls. Both keys remain unconfigured in the local application.

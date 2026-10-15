@@ -5,13 +5,13 @@ import {
   Bot,
   Check,
   Code2,
-  Database,
   Plug,
   Radio,
   ShieldCheck,
 } from "lucide-react";
 import { api } from "./lib";
 import "./performance.css";
+import NativeConnections from "./NativeConnections";
 type Connections = {
   claude: { configured: boolean; enabled: boolean; model: string };
   youtube: { configured: boolean };
@@ -51,7 +51,7 @@ export default function Integrations({
         </p>
       )}
       <div className="integration-grid">
-        <section className="panel integration-card">
+        <section className="panel integration-card" data-tour="claude-plugin">
           <span className="integration-icon">
             <Plug size={25} />
           </span>
@@ -194,66 +194,7 @@ export default function Integrations({
           </p>
         </section>
       </div>
-      <section className="panel">
-        <div className="panel-head">
-          <div>
-            <h2>Performance data connections</h2>
-            <p>
-              Import and ingestion support for eight platforms; native public
-              discovery for YouTube.
-            </p>
-          </div>
-          <Database size={20} />
-        </div>
-        <div className="table-wrap">
-          <table className="performance-table">
-            <thead>
-              <tr>
-                <th>Platform</th>
-                <th>CSV import</th>
-                <th>JSON ingestion API</th>
-                <th>Native account/API sync</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.platforms.map((row) => (
-                <tr key={row.platform}>
-                  <td className="capitalize">
-                    <strong>
-                      {row.platform === "youtube"
-                        ? "YouTube"
-                        : row.platform === "linkedin"
-                          ? "LinkedIn"
-                          : row.platform === "tiktok"
-                            ? "TikTok"
-                            : row.platform}
-                    </strong>
-                  </td>
-                  <td>
-                    <span className="tag">Available</span>
-                  </td>
-                  <td>
-                    <span className="tag">Available</span>
-                  </td>
-                  <td>
-                    {row.nativeApi ? (
-                      <span
-                        className={`tag ${data.youtube.configured ? "" : "amber"}`}
-                      >
-                        {data.youtube.configured
-                          ? "YouTube key configured"
-                          : "YouTube key required"}
-                      </span>
-                    ) : (
-                      "Not implemented · import/ingest supported"
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <NativeConnections />
       <div className="integration-grid">
         <section className="panel integration-card compact">
           <span className="integration-icon">
@@ -284,9 +225,10 @@ export default function Integrations({
             <code>metricBasis: daily</code>, and a <code>rows</code> array.
           </p>
           <p className="integration-help">
-            This is a local ingestion endpoint. External OAuth authorization and
-            direct account sync for Instagram, TikTok, LinkedIn, Facebook, X,
-            Pinterest and Threads are not built into this release.
+            This local endpoint accepts daily increments. Use the native pull
+            cards above for lifetime account snapshots. Authorization happens
+            through each provider’s developer tools; Waypoint does not run an
+            OAuth login service.
           </p>
         </section>
       </div>

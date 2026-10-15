@@ -9,10 +9,12 @@ import { performanceFilters, type Performance, type PerformanceFilters, type You
 import { similarContent, getPerformance } from '../server/performance.js';
 import { DatabaseSync } from 'node:sqlite';
 import { createYouTubeProvider, youtubeInput } from '../server/youtube.js';
+import { snapshotFilters, type SnapshotReport } from '../shared/connectors.js';
 const output = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data) }] });
-export function createWaypointMcp(workspace: () => unknown = () => ({ projects: [], ranks: [] }), options: { performance?: (filters: PerformanceFilters) => Performance; research?: (input: { keyword: string; sort: 'relevance' | 'viewCount' | 'date' }) => Promise<YouTubeResearch> } = {}) {
-  const server = new McpServer({ name: 'waypoint-seo', version: '0.3.0' });
+export function createWaypointMcp(workspace: () => unknown = () => ({ projects: [], ranks: [] }), options: { snapshots?: (filters: ReturnType<typeof snapshotFilters.parse>) => SnapshotReport; performance?: (filters: PerformanceFilters) => Performance; research?: (input: { keyword: string; sort: 'relevance' | 'viewCount' | 'date' }) => Promise<YouTubeResearch> } = {}) {
+  const server = new McpServer({ name: 'waypoint-seo', version: '0.4.0' });
   const local = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
+  server.registerTool('social_api_snapshots', { description: 'Read saved official API lifetime post snapshots for Instagram, TikTok, LinkedIn organizations, Facebook Pages, X, Pinterest and Threads. Text topic filtering is not measured keyword demand. No sync, network requests, credential reads, or writes.', inputSchema: snapshotFilters.shape, annotations: local }, input => output(options.snapshots ? options.snapshots(snapshotFilters.parse(input)) : { posts: [], runs: [], metricBasis: 'lifetime', disclosure: 'No local snapshot reader is configured.' }));
   const domainInput = { domain: z.string().min(3).max(253) };
   function overview(domain: string) { return demoProvider.overview(normalizeDomain(domain)); }
   server.registerTool('domain_overview', { description: 'Synthetic demo domain metrics, not observed traffic or rankings. No network access.', inputSchema: domainInput, annotations: local }, ({ domain }) => output(overview(domain)));

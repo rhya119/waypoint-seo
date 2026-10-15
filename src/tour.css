@@ -1,0 +1,270 @@
+.tour-spotlight {
+  position: fixed;
+  z-index: 1100;
+  pointer-events: none;
+  border: 3px solid #6ce5bc;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px #071d22a8;
+  transition:
+    left 0.15s,
+    top 0.15s,
+    width 0.15s,
+    height 0.15s;
+}
+.tour-coach {
+  position: fixed;
+  z-index: 1102;
+  background: #fff;
+  border: 1px solid #dce9e3;
+  border-radius: 16px;
+  padding: 20px;
+  color: #173e34;
+  box-shadow: 0 20px 80px #071d2255;
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  outline: none;
+}
+.tour-coach-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.tour-coach-top > span {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 1px;
+  font-weight: 800;
+}
+.tour-coach h2 {
+  font-size: 21px;
+  margin: 10px 0;
+}
+.tour-coach p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475f57;
+}
+.tour-coach small {
+  font-size: 11px;
+  color: #63796f;
+}
+.tour-progress {
+  height: 4px;
+  background: #e6efeb;
+  border-radius: 4px;
+  margin: 18px 0;
+}
+.tour-progress span {
+  display: block;
+  height: 100%;
+  background: #208469;
+  border-radius: 4px;
+}
+.tour-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+.tour-actions .button {
+  padding: 9px 12px;
+  font-size: 12px;
+}
+.tour-actions .text-button {
+  font-size: 12px;
+}
+.tour-keyboard {
+  display: block;
+  font-size: 10px;
+  color: #6b7f77;
+  margin-top: 14px;
+}
+.tour-welcome {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  margin: 0 0 20px;
+  border: 1px solid #c2dfd0;
+  background: #ecf7f0;
+  border-radius: 12px;
+}
+.tour-welcome p {
+  margin: 4px 0;
+  font-size: 13px;
+}
+.tour-welcome > div:last-child {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.topbar .tour-start {
+  display: flex;
+  gap: 5px;
+  white-space: nowrap;
+}
+.native-filters {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.native-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.native-filters input,
+.native-filters select {
+  padding: 10px;
+  border: 1px solid #d5e1db;
+  border-radius: 8px;
+  background: white;
+  max-width: 100%;
+  color: #234438;
+}
+.native-disclosure {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #526b60;
+  background: #f0f5f2;
+  padding: 14px;
+  border-radius: 9px;
+}
+.native-connection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.native-connection {
+  border: 1px solid #dce7df;
+  border-radius: 12px;
+  padding: 19px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.native-connection > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.native-connection h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.native-connection p,
+.native-connection details {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #526b60;
+  margin: 0;
+}
+.native-connection details {
+  margin-bottom: 5px;
+}
+.native-connection summary {
+  cursor: pointer;
+  color: #21705a;
+  font-weight: 600;
+}
+.native-connection code {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.native-connection ul {
+  padding-left: 16px;
+}
+.native-connection > .button {
+  align-self: start;
+  margin-top: auto;
+}
+.native-comparison {
+  margin: 22px 0;
+  padding: 18px;
+  background: #f1f6f3;
+  border-radius: 12px;
+}
+.native-comparison p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.native-comparison > div {
+  padding: 12px 0;
+  border-bottom: 1px solid #d6e2da;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.native-comparison span {
+  font-size: 12px;
+  color: #566f62;
+}
+.native-pull-history {
+  margin-top: 20px;
+  font-size: 13px;
+}
+.native-pull-history summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.native-pull-history > div {
+  padding: 12px;
+  border-bottom: 1px solid #dce7df;
+}
+.native-pull-history p {
+  margin: 5px 0;
+  color: #6c5c28;
+}
+.native-performance td:first-child {
+  max-width: 300px;
+  min-width: 210px;
+}
+.native-performance small {
+  display: block;
+  margin-top: 5px;
+}
+@media (max-width: 640px) {
+  .tour-coach {
+    bottom: 12px;
+    padding: 16px;
+    max-height: 46dvh;
+  }
+  .tour-welcome {
+    align-items: start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .native-connection-grid {
+    grid-template-columns: 1fr;
+  }
+  .native-filters {
+    align-items: stretch;
+  }
+  .native-filters label {
+    width: 100%;
+  }
+  .topbar-right > .tour-start {
+    display: flex !important;
+  }
+  .tour-coach p {
+    font-size: 13px;
+  }
+  .tour-coach h2 {
+    font-size: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-spotlight {
+    transition: none;
+  }
+}

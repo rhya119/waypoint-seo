@@ -10,8 +10,11 @@ test('real stdio connector discovers tools and runs an audit with no API key or 
   const client = new Client({ name: 'waypoint-test', version: '1.0.0' });
   try {
     await client.connect(transport);
-    const tools = await client.listTools(); assert.equal(tools.tools.length, 17);
+    const tools = await client.listTools(); assert.equal(tools.tools.length, 18);
     assert.ok(tools.tools.every(tool => tool.annotations?.readOnlyHint === true));
+    const snapshots = await client.callTool({ name: 'social_api_snapshots', arguments: { platform: 'all' } });
+    const snapshotData = JSON.parse((snapshots.content as { text: string }[])[0].text);
+    assert.equal(snapshotData.metricBasis, 'lifetime'); assert.deepEqual(snapshotData.posts, []);
     const response = await client.callTool({ name: 'social_audit', arguments: { html: '<html><head><meta property="og:title" content="Garden guide"></head></html>', pageUrl: 'https://one.example/' } });
     assert.equal(response.isError, undefined);
     const block = (response.content as { type: string; text: string }[])[0]; assert.equal(JSON.parse(block.text).openGraph.title, 'Garden guide');
