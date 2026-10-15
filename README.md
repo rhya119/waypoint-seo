@@ -103,7 +103,9 @@ The helper invokes pinned `rea-agents@6.4.0` through npm's `npx-cli.js`, launche
 
 ## Private GitHub repository
 
-The project is initialized on `main`. If no remote exists, install [GitHub CLI](https://cli.github.com/), authenticate with `gh auth login`, then run:
+Source: **[rhya119/waypoint-seo](https://github.com/rhya119/waypoint-seo)**. The repository is private, and `main` tracks `origin/main`. Pushes and pull requests trigger the included GitHub Actions check workflow.
+
+For a separate copy without a remote, install [GitHub CLI](https://cli.github.com/), authenticate with `gh auth login`, then run:
 
 ```powershell
 .\scripts\push-private.ps1

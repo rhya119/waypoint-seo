@@ -33,4 +33,6 @@ Raw local REA captures and screenshots are in ignored `artifacts/`. They are not
 
 ## GitHub handoff
 
-The connected GitHub profile was readable as `rhya119`. This session's connector has no repository-creation tool; GitHub CLI, a noninteractive Git credential, and a usable browser surface were unavailable. No remote repository was created. The local Git repository is committed on `main`; `scripts/push-private.ps1` creates a private repository and pushes after normal GitHub CLI authentication becomes available. No public repository or deployment was created.
+Created **[rhya119/waypoint-seo](https://github.com/rhya119/waypoint-seo)** as a private repository after the user completed GitHub CLI device authentication. The initial scaffold commit `ffcf61e330810910c61e32aae2df5f8852fe9434` was pushed to `main`; `git ls-remote` confirmed the matching remote SHA. GitHub's repository metadata returned `isPrivate: true` and default branch `main`. The included check workflow started automatically on push. No application deployment or public repository was created.
+
+The app connector did not expose repository creation. To complete the handoff, the official GitHub CLI 2.102.0 Windows archive was downloaded from `cli/cli` releases, its SHA-256 was matched against the release checksums, and it was extracted under ignored `artifacts/github-cli/`. CLI authentication succeeded as `rhya119` using the OS keyring. Credentials and CLI binaries are excluded from source control. Use an installed GitHub CLI or this local executable for subsequent pushes.
