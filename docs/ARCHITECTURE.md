@@ -20,11 +20,11 @@ These controls support a single-user local scaffold. They do not replace identit
 
 ## Social and Claude modules
 
-`shared/social.ts` contains input validation and pure caption/UTM/escaped-markup generation. `server/social.ts` parses submitted Open Graph/X-style metadata without fetching pages or images. `src/SocialSeo.tsx` keeps draft/audit state within the module and exports results on demand; no new database schema is needed. Social scores are explicit editorial/markup checklists.
+`shared/performance.ts` defines typed daily observation, filter and analysis contracts. `server/performance.ts` validates mapped CSV/JSON, atomically upserts observations and computes nullable metrics, paired-denominator rates, equal-length periods, lexical comparisons and coverage. SQLite adds `social_observations`, `social_queries` and `settings`. The schema is additive; existing projects/ranks remain intact. Daily data and public lifetime YouTube results are separate data paths. `src/SocialSeo.tsx` is the main performance workspace; `src/Integrations.tsx` owns optional provider/plugin settings. `src/SocialTools.tsx` retains the old publishing checks as secondary utilities.
 
 `server/claude.ts` is the only AI provider adapter. The server injects it into the API at startup using `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`. Tests inject an isolated transport to verify the actual SDK request contract without making paid network calls. Missing keys and failed requests return explicit errors, never mock recommendations. The UI renders responses as text and discards responses if the workspace context changed during a request.
 
-`mcp/index.ts` serves stdio using the official MCP SDK, sharing the local analysis functions through ten read-only tools. It reserves stdout for protocol traffic and opens SQLite read-only only for workspace reads. It neither starts the HTTP API nor calls Anthropic. Claude clients provide their own model access. See [Claude setup](CLAUDE.md) and [Social SEO behavior](SOCIAL_SEO.md).
+`mcp/index.ts` serves stdio using the official MCP SDK and 17 read-only tools. It reserves stdout for protocol traffic and opens SQLite read-only for workspace/performance reads. Only explicit native YouTube discovery has network access. It neither starts the HTTP API nor calls Anthropic. The optional Claude Code plugin packages three workflow skills with this same server; a tested single-process launcher avoids orphan child servers. Claude clients provide their own model access. The in-app advisor is off by default and must be enabled in persisted settings before API requests are accepted. See [plugin setup](PLUGIN.md) and [performance methodology](PERFORMANCE_DATA.md).
 
 ## Future provider contract
 

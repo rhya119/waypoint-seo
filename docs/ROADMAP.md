@@ -17,7 +17,16 @@
 - Claude Code registered for the current project and reported Connected. Claude Desktop setup is documented.
 - Live Claude API verification still requires a configured Anthropic key; local SDK tests use a mocked response.
 
-## 0.3 — Provider-backed research
+## 0.3 — Measured social performance and optional platform plugin (implemented)
+
+- Daily content/query CSV validation, preview, atomic imports and normalized ingestion API for eight platforms.
+- Query impressions/clicks/CTR/history, topic-associated performance, date/platform/keyword filters and source separation.
+- Missing-data-aware totals, rate denominators, period coverage, lexical similar-content comparisons and account benchmarks.
+- Native public YouTube keyword discovery and video statistics adapter; live verification requires a key.
+- Redesigned platform navigation and Integrations; optional in-app Claude off by default.
+- Optional Claude Code source plugin with three skills, 17 MCP tools, validated manifest and tested launcher/bundle.
+
+## 0.4 — Expanded provider-backed research
 
 - Select licensed keyword, backlink, and SERP data sources after reviewing coverage, cost, terms, and retention constraints.
 - Convert the provider interface to async operations with independent capability flags, pagination, market/device/date filters, timeouts, bounded retries, usage budgets, and cache keys.
@@ -26,7 +35,7 @@
 - Build actual keyword intersections and competitor content gaps from provider rows.
 - Acceptance: integration fixtures and a limited live smoke test establish timestamps, source labels, costs, and graceful failure.
 
-## 0.4 — Controlled site crawler
+## 0.5 — Controlled site crawler
 
 - Site-ownership/permission workflow; robots policy; same-origin crawl boundaries and sitemap discovery.
 - HTTP(S) allowlist, public-IP DNS resolution, redirect revalidation, DNS-rebinding protection, restricted outbound networking, response-byte limits, timeouts and crawl budgets.
@@ -34,7 +43,7 @@
 - Persist pages, response headers, links and findings; detect duplicate titles, broken internal links, canonical conflicts and indexing issues.
 - Acceptance: local test sites cover redirects, private-IP attempts, robots exclusions, malformed HTML and cancellation; never expose arbitrary URL fetching as an unguarded endpoint.
 
-## 0.5 — Rank history and reports
+## 0.6 — Rank history and reports
 
 - Append-only SERP observations keyed by project, keyword, market, device and date.
 - Scheduled jobs with idempotency keys, provider quotas, alerts and missing-result states.

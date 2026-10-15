@@ -1,6 +1,6 @@
 {
   "name": "waypoint-seo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,14 +13,17 @@
     "test": "tsx --test tests/*.test.ts",
     "check": "npm test && npm run build",
     "mcp": "tsx mcp/index.ts",
-    "mcp:config": "node scripts/mcp-config.mjs"
+    "mcp:config": "node scripts/mcp-config.mjs",
+    "plugin:package": "node scripts/package-plugin.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.134.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "cheerio": "^1.1.2",
+    "csv-parse": "^7.0.3",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
+    "fflate": "^0.8.3",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

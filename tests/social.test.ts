@@ -42,6 +42,8 @@ test('social APIs validate inputs and Claude without a key returns setup state w
   const db = new DatabaseSync(':memory:'); const app = createApp(db);
   try {
     const status = await request(app).get('/api/claude/status').expect(200); assert.equal(status.body.configured, false);
+    await request(app).post('/api/claude/recommend').send({ prompt: 'Help me improve', context: '{}' }).expect(403);
+    await request(app).put('/api/integrations/claude').send({ enabled: true }).expect(200);
     await request(app).post('/api/claude/recommend').send({ prompt: 'Help me improve', context: '{}' }).expect(503);
     await request(app).post('/api/social/audit').send({ html: '<head></head>', pageUrl: 'file:///bad' }).expect(400);
     const result = await request(app).post('/api/social/metadata').send(metadata).expect(200); assert.match(result.body.html, /og:title/);

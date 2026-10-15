@@ -10,7 +10,7 @@ test('real stdio connector discovers tools and runs an audit with no API key or 
   const client = new Client({ name: 'waypoint-test', version: '1.0.0' });
   try {
     await client.connect(transport);
-    const tools = await client.listTools(); assert.equal(tools.tools.length, 10);
+    const tools = await client.listTools(); assert.equal(tools.tools.length, 17);
     assert.ok(tools.tools.every(tool => tool.annotations?.readOnlyHint === true));
     const response = await client.callTool({ name: 'social_audit', arguments: { html: '<html><head><meta property="og:title" content="Garden guide"></head></html>', pageUrl: 'https://one.example/' } });
     assert.equal(response.isError, undefined);
@@ -19,5 +19,10 @@ test('real stdio connector discovers tools and runs an audit with no API key or 
     assert.deepEqual(JSON.parse((workspace.content as { text: string }[])[0].text).projects, []);
     const invalid = await client.callTool({ name: 'campaign_link', arguments: { url: 'javascript:alert(1)', source: 'x', medium: 'social', campaign: 'bad' } });
     assert.equal(invalid.isError, true);
+    const performance = await client.callTool({ name: 'social_performance', arguments: { dataset: 'example', platform: 'youtube' } });
+    const data = JSON.parse((performance.content as { text: string }[])[0].text);
+    assert.equal(data.dataset, 'example'); assert.ok(data.posts.length > 0);
+    const similar = await client.callTool({ name: 'similar_content', arguments: { dataset: 'example', platform: 'youtube', referenceId: JSON.stringify([data.posts[0].platform, data.posts[0].account, data.posts[0].content_id]) } });
+    assert.ok(JSON.parse((similar.content as { text: string }[])[0].text).matches.length > 0);
   } finally { await client.close(); }
 });

@@ -1,0 +1,11 @@
+{
+  "name": "waypoint-seo",
+  "version": "0.3.0",
+  "description": "Search and social performance intelligence: keyword research, comparable content, competitors, domain analysis, backlinks, audits, rank baselines and reports.",
+  "author": { "name": "rhya119" },
+  "repository": "https://github.com/rhya119/waypoint-seo",
+  "keywords": ["seo", "social-performance", "keywords", "analytics", "mcp"],
+  "mcpServers": {
+    "waypoint": { "command": "node", "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/launch.mjs"] }
+  }
+}

@@ -1,13 +1,13 @@
 # Claude API and local connector
 
-Waypoint supports two separate paths: the web UI calls Anthropic's Claude API for advice, and Claude clients use Waypoint's MCP server as a local toolkit. No other AI provider is implemented.
+Waypoint supports two optional paths: the web UI calls Anthropic's Claude API for advice after opt-in, and Claude clients use the whole platform through a local plugin or direct MCP connection. No other AI provider is implemented. See [plugin choices](PLUGIN.md) for the v0.3 package and its 17 tools.
 
 ## Built-in advisor
 
 1. Create `.env` from `.env.example` if needed.
 2. Put your own Anthropic API key in `ANTHROPIC_API_KEY` in that ignored file. Do not paste it into a caption, prompt, GitHub issue, or frontend variable.
 3. Set `ANTHROPIC_MODEL` to a model your account can use. The current default is `claude-sonnet-5-5`, from Anthropic's [model catalog](https://platform.claude.com/docs/en/models/overview).
-4. Restart the development server and use Ask Claude under any toolkit view.
+4. Restart the development server, enable **Show Claude analysis** under **Integrations**, then explicitly open Claude analysis in a toolkit view. The setting is off by default and enforced server-side.
 
 The UI says “API key configured” based on key presence, not successful authentication. No API call is made to validate a key during page load. A Claude chat subscription and API access are separate; the website advisor requires API credentials and available billing. The status route returns only the configured flag, provider and model.
 
@@ -17,7 +17,7 @@ Responses include model identity, input/output token counts, and a truncation fl
 
 ## MCP connector
 
-The stdio MCP server does not need the web server to run. It uses the same analysis helpers directly, has no website-fetching or publishing capabilities, and opens the configured SQLite database read-only when `read_workspace` is called. It never calls the Claude API. A Claude client can reason over tool results using its own model access.
+The stdio MCP server does not need the web server to run. It uses the same analysis helpers directly and opens configured SQLite read-only for workspace/performance reads. It never calls the Claude API. Only the explicit `youtube_research` tool contacts fixed official Google endpoints and consumes YouTube quota when configured; there is no arbitrary URL fetching or publishing capability. A Claude client reasons over tool results using its own model access.
 
 ```powershell
 npm ci
@@ -60,6 +60,13 @@ Merge the generated `waypoint` entry into the `mcpServers` object of your existi
 | `social_caption_review` | Editorial phrase and hashtag checks |
 | `campaign_link` | UTM URL generation |
 | `read_workspace` | Read saved projects and demo rank baselines for reports |
+| `social_performance` | Imported daily metrics, trends and coverage |
+| `social_keywords` | Measured query statistics and separately labeled topic associations |
+| `similar_content` | Lexical topic matches and observed performance gaps |
+| `performance_report` | Source-aware social performance report |
+| `rank_tracking` | Filtered saved demo positions for a domain |
+| `seo_report` | Whole-domain demo SEO report and rank baselines |
+| `youtube_research` | Explicit native public keyword/video discovery when configured |
 
 All tools declare read-only, non-destructive annotations. Source-of-data limitations are included in tool descriptions/results. Missing databases yield an empty workspace instead of creating a new database. A read failure or unknown schema is reported as a tool error. No API keys, arbitrary filesystem paths, file-write tools, or shell execution are exposed to the client.
 

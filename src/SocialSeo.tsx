@@ -1,45 +1,1128 @@
-import { useState, type ReactNode } from 'react';
-import { ArrowDownToLine, Check, Copy, Globe2, Hash, Image, Link2, Share2, Sparkles, X } from 'lucide-react';
-import { api, download } from './lib';
-import { buildCampaignLink, buildSocialMetadata, type SocialAudit, type CaptionReview, type SocialMetadata } from '../shared/social';
-import ClaudeAdvisor from './ClaudeAdvisor';
-import './social.css';
-
-function Card({ title, detail, children }: { title: string; detail: string; children: ReactNode }) {
-  return <section className="panel"><div className="panel-head"><div><h2>{title}</h2><p>{detail}</p></div></div><div className="social-card-body">{children}</div></section>;
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ArrowDownToLine,
+  ArrowRight,
+  ArrowUpRight,
+  BarChart3,
+  Check,
+  ChevronDown,
+  FileUp,
+  Hash,
+  Layers3,
+  Radio,
+  Search,
+  X,
+} from "lucide-react";
+import { api, download, number } from "./lib";
+import {
+  platforms,
+  type Performance,
+  type SimilarContent,
+  type ImportPreview,
+  type YouTubeResearch,
+  type MetricKey,
+} from "../shared/performance";
+import SocialTools from "./SocialTools";
+import ClaudeAdvisor from "./ClaudeAdvisor";
+import "./performance.css";
+const labels: Record<string, string> = {
+  youtube: "YouTube",
+  instagram: "Instagram",
+  tiktok: "TikTok",
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  x: "X",
+  pinterest: "Pinterest",
+  threads: "Threads",
+  all: "All platforms",
+};
+const fmt = (value: number | null | undefined) =>
+  value == null ? "—" : number(value);
+const percent = (value: number | null | undefined) =>
+  value == null ? "—" : `${value.toFixed(2)}%`;
+const identity = (row: {
+  platform: string;
+  account: string;
+  content_id: string;
+}) => JSON.stringify([row.platform, row.account, row.content_id]);
+function Panel({
+  title,
+  detail,
+  children,
+  action,
+}: {
+  title: string;
+  detail: string;
+  children: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <section className="panel">
+      <div className="panel-head">
+        <div>
+          <h2>{title}</h2>
+          <p>{detail}</p>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
 }
-const starterHtml = `<html><head>
-<meta property="og:title" content="Small spaces, greener living" />
-<meta property="og:description" content="Practical ideas for a thoughtful home, one small change at a time." />
-<meta property="og:type" content="article" />
-<meta property="og:url" content="https://northstar.example/journal" />
-<meta property="og:image" content="https://northstar.example/images/garden.jpg" />
-<meta name="twitter:card" content="summary_large_image" />
-</head><body></body></html>`;
-export default function SocialSeo({ domain }: { domain: string }) {
-  const [tab, setTab] = useState('Share audit'); const [error, setError] = useState(''); const [notice, setNotice] = useState(''); const [busy, setBusy] = useState(false);
-  const [pageUrl, setPageUrl] = useState(`https://${domain}/journal`); const [html, setHtml] = useState(starterHtml.replaceAll('northstar.example', domain));
-  const [audit, setAudit] = useState<SocialAudit>(); const [preview, setPreview] = useState('Open Graph');
-  const [meta, setMeta] = useState<SocialMetadata>({ pageUrl: `https://${domain}/journal`, title: 'Small spaces, greener living', description: 'Practical ideas for a thoughtful home, one small change at a time.', imageUrl: `https://${domain}/images/garden.jpg`, imageAlt: 'A sunlit balcony filled with leafy plants', siteName: 'Northstar journal', type: 'article', card: 'summary_large_image' });
-  const [snippet, setSnippet] = useState(''); const [caption, setCaption] = useState('Sustainable living starts with the space you have. Try a balcony herb garden this weekend, and save this guide for your next small step. #SustainableLiving #SmallSpaces');
-  const [keyword, setKeyword] = useState('sustainable living'); const [platform, setPlatform] = useState('Instagram'); const [review, setReview] = useState<CaptionReview>();
-  const [campaign, setCampaign] = useState({ url: `https://${domain}/journal`, source: 'instagram', medium: 'social', campaign: 'greener_living', content: 'balcony_guide' }); const [campaignUrl, setCampaignUrl] = useState('');
-  async function run(task: () => Promise<void> | void) { setBusy(true); setError(''); setNotice(''); try { await task(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
-  async function copy(text: string) { try { await navigator.clipboard.writeText(text); setNotice('Copied to clipboard.'); } catch { setError('Clipboard is unavailable. Select the text below or use Download.'); } }
-  const context = JSON.stringify({ domain, source: 'submitted data and local checks', audit, caption: tab === 'Content planner' ? caption : undefined, keyword: tab === 'Content planner' ? keyword : undefined, captionReview: review, metadata: meta, campaignUrl, disclaimer: 'No social analytics, trending hashtag data, or live search observations are connected.' });
-  const card = audit ? preview === 'Open Graph' ? audit.openGraph : audit.xCard : undefined;
-  return <div className="social-module">
-    <div className="social-banner"><div className="social-banner-icon"><Share2 size={24}/></div><div><span className="eyebrow">MAKE EVERY SHARE MORE USEFUL</span><h2>A better first impression.</h2><p>Check the details, sharpen your message, and give every campaign a clear trail.</p></div><span className="tag">Local tools + Claude</span></div>
-    <div className="social-tabs" aria-label="Social SEO tools">{['Share audit', 'Content planner', 'Campaign links'].map((name, i) => <button key={name} aria-pressed={tab === name} className={tab === name ? 'selected' : ''} onClick={() => { setTab(name); setError(''); setNotice(''); }}>{i === 0 ? <Share2 size={15}/> : i === 1 ? <Hash size={15}/> : <Link2 size={15}/>} {name}</button>)}</div>
-    {error && <p className="social-error" role="alert">{error}</p>}{notice && <p className="social-success" role="status">{notice}</p>}
-    {tab === 'Share audit' && <>
-      <div className="social-grid"><Card title="Inspect your share metadata" detail="Paste the page HTML. The page and image URLs are never fetched."><form onSubmit={e => { e.preventDefault(); void run(async () => setAudit(await api<SocialAudit>('/social/audit', { html, pageUrl }))); }}><label htmlFor="social-url">Page URL</label><input id="social-url" type="url" required maxLength={2048} value={pageUrl} onChange={e => { setPageUrl(e.target.value); setAudit(undefined); }}/><label htmlFor="social-html">Page HTML</label><textarea id="social-html" value={html} maxLength={900000} onChange={e => { setHtml(e.target.value); setAudit(undefined); }} required spellCheck={false}/><button className="button primary" disabled={busy}><Share2 size={15}/>Run share audit</button></form></Card>
-      <Card title="A view of your shared link" detail="Illustrative layouts, not a live platform render."><div className="preview-switch">{['Open Graph', 'X-style card'].map(v => <button key={v} className={preview === v ? 'selected' : ''} aria-pressed={preview === v} onClick={() => setPreview(v)}>{v}</button>)}</div><div className={`social-preview ${preview === 'X-style card' && audit?.xCard.card === 'summary' ? 'compact' : ''}`}><div className="social-preview-image"><Image size={34} strokeWidth={1}/><span>{card?.image ? 'Image URL declared' : 'Your share image'}</span><small>Placeholder · image not loaded</small></div><div className="social-preview-text"><small><Globe2 size={11}/>{(() => { try { return new URL(audit?.openGraph.url || pageUrl).hostname; } catch { return 'Your website'; } })()}</small><h3>{card?.title || 'Your page title appears here'}</h3><p>{card?.description || 'A useful description gives people a reason to explore.'}</p></div></div>{card?.image && <p className="detected-image"><strong>Declared image</strong><span>{card.image}</span></p>}<p className="social-fine">Checks inspect supplied metadata only. Platform caching, image availability, dimensions, and final presentation can differ.</p></Card></div>
-      {audit && <Card title={`Share checklist · ${audit.score}/100`} detail="Equal-weight markup checklist, not a ranking or engagement score."><div className="social-check-grid">{audit.checks.map(check => <div className="social-check" key={check.name}><span className={check.passed ? 'pass' : 'fail'}>{check.passed ? <Check size={15}/> : <X size={15}/>}</span><div><strong>{check.name}</strong><p>{check.detail}</p></div></div>)}</div><button className="text-button" onClick={() => download('waypoint-social-audit.json', JSON.stringify(audit, null, 2), 'application/json')}><ArrowDownToLine size={14}/>Download audit JSON</button></Card>}
-      <Card title="Build your metadata" detail="Edit the fields, generate safe HTML, and add it inside your page’s head element."><form onSubmit={e => { e.preventDefault(); void run(() => setSnippet(buildSocialMetadata(meta))); }}><div className="metadata-grid">{(['title', 'description', 'pageUrl', 'imageUrl', 'imageAlt', 'siteName'] as const).map(key => <label key={key} htmlFor={`meta-${key}`}>{({ title: 'Share title', description: 'Share description', pageUrl: 'Canonical share URL', imageUrl: 'Image URL', imageAlt: 'Image alternative text', siteName: 'Site name (optional)' })[key]}<input id={`meta-${key}`} type={key.endsWith('Url') ? 'url' : 'text'} required={key !== 'siteName'} maxLength={key.endsWith('Url') ? 2048 : key === 'imageAlt' ? 420 : key === 'description' ? 400 : key === 'siteName' ? 80 : 150} value={meta[key]} onChange={e => { setMeta({ ...meta, [key]: e.target.value }); setSnippet(''); }}/></label>)}<label htmlFor="meta-type">Content type<select id="meta-type" value={meta.type} onChange={e => { setMeta({ ...meta, type: e.target.value as SocialMetadata['type'] }); setSnippet(''); }}><option value="article">Article</option><option value="website">Website</option></select></label><label htmlFor="meta-card">X-style card layout<select id="meta-card" value={meta.card} onChange={e => { setMeta({ ...meta, card: e.target.value as SocialMetadata['card'] }); setSnippet(''); }}><option value="summary_large_image">Large image</option><option value="summary">Summary</option></select></label></div><button className="button secondary" disabled={busy}><Sparkles size={15}/>Generate metadata</button></form>{snippet && <div className="snippet-result"><label htmlFor="social-snippet">Generated HTML</label><textarea id="social-snippet" value={snippet} readOnly spellCheck={false}/><div className="social-actions"><button className="text-button" onClick={() => void copy(snippet)}><Copy size={14}/>Copy HTML</button><button className="text-button" onClick={() => download('waypoint-social-meta.html', snippet, 'text/html')}><ArrowDownToLine size={14}/>Download</button><button className="text-button" onClick={() => { setHtml(`<html><head>${snippet}</head><body></body></html>`); setPageUrl(meta.pageUrl); setAudit(undefined); setNotice('Generated metadata is ready in the audit form above.'); }}>Use in audit</button></div></div>}</Card>
-    </>}
-    {tab === 'Content planner' && <div className="social-grid"><Card title="Give your message a focus" detail="Review a caption against transparent editorial checks."><form onSubmit={e => { e.preventDefault(); void run(async () => setReview(await api<CaptionReview>('/social/caption', { caption, keyword, platform }))); }}><div className="metadata-grid"><label htmlFor="social-platform">Platform<select id="social-platform" value={platform} onChange={e => { setPlatform(e.target.value); setReview(undefined); }}>{['Instagram', 'LinkedIn', 'X', 'TikTok', 'YouTube', 'Facebook', 'Pinterest'].map(p => <option key={p}>{p}</option>)}</select></label><label htmlFor="social-keyword">Main phrase<input id="social-keyword" value={keyword} minLength={2} maxLength={100} onChange={e => { setKeyword(e.target.value); setReview(undefined); }} required/></label></div><label htmlFor="social-caption">Caption or post draft</label><textarea id="social-caption" value={caption} maxLength={10000} onChange={e => { setCaption(e.target.value); setReview(undefined); }} required/><small className="caption-count">{[...caption].length} characters · {[...(caption.match(/#[\p{L}\p{N}_]+/gu) || [])].length} hashtags</small><button className="button primary" disabled={busy}><Hash size={15}/>Review caption</button></form></Card><Card title={review ? `Editorial checklist · ${review.score}/100` : 'Make the next edit count'} detail="No live trends, reach prediction, or platform ranking score.">{review ? <><div className="social-check-list">{review.checks.map(check => <div className="social-check" key={check.name}><span className={check.passed ? 'pass' : 'fail'}>{check.passed ? <Check size={15}/> : <X size={15}/>}</span><div><strong>{check.name}</strong><p>{check.detail}</p></div></div>)}</div><button className="text-button" onClick={() => download('waypoint-caption-review.json', JSON.stringify({ caption, keyword, ...review }, null, 2), 'application/json')}><ArrowDownToLine size={14}/>Download review</button></> : <div className="social-empty"><Hash size={32}/><h3>Clarity travels further.</h3><p>Check topic placement, repeated hashtags, and useful context. Ask Claude below for rewriting ideas.</p></div>}</Card></div>}
-    {tab === 'Campaign links' && <div className="social-grid"><Card title="Build a campaign link" detail="Keep your original query parameters and add clear UTM attribution."><form onSubmit={e => { e.preventDefault(); void run(() => setCampaignUrl(buildCampaignLink(campaign as Parameters<typeof buildCampaignLink>[0]).url)); }}><label htmlFor="campaign-url">Destination URL<input id="campaign-url" type="url" required value={campaign.url} maxLength={2048} onChange={e => { setCampaign({ ...campaign, url: e.target.value }); setCampaignUrl(''); }}/></label><div className="metadata-grid"><label htmlFor="campaign-source">Source<select id="campaign-source" value={campaign.source} onChange={e => { setCampaign({ ...campaign, source: e.target.value }); setCampaignUrl(''); }}>{['instagram', 'linkedin', 'facebook', 'x', 'tiktok', 'youtube', 'pinterest', 'threads'].map(s => <option key={s}>{s}</option>)}</select></label><label htmlFor="campaign-medium">Medium<select id="campaign-medium" value={campaign.medium} onChange={e => { setCampaign({ ...campaign, medium: e.target.value }); setCampaignUrl(''); }}><option value="social">Organic social</option><option value="paid_social">Paid social</option></select></label><label htmlFor="campaign-name">Campaign name<input id="campaign-name" value={campaign.campaign} required maxLength={120} onChange={e => { setCampaign({ ...campaign, campaign: e.target.value }); setCampaignUrl(''); }}/></label><label htmlFor="campaign-content">Content label (optional)<input id="campaign-content" value={campaign.content} maxLength={120} onChange={e => { setCampaign({ ...campaign, content: e.target.value }); setCampaignUrl(''); }}/></label></div><button className="button primary" disabled={busy}><Link2 size={15}/>Build tracked link</button></form></Card><Card title="One link. A clearer story." detail="Attribution starts when your analytics system records a visit.">{campaignUrl ? <div className="campaign-result"><span className="tag">READY TO USE</span><label htmlFor="campaign-result">Your tracked URL</label><textarea id="campaign-result" value={campaignUrl} readOnly/><div className="social-actions"><button className="button secondary" onClick={() => void copy(campaignUrl)}><Copy size={14}/>Copy link</button><button className="text-button" onClick={() => download('waypoint-campaign-link.txt', campaignUrl, 'text/plain')}><ArrowDownToLine size={14}/>Download</button></div></div> : <div className="social-empty"><Link2 size={32}/><h3>Give every visit a trail.</h3><p>Choose your source, campaign, and content label to generate a link.</p></div>}<p className="social-fine">This creates a URL only. It does not shorten links, record clicks, connect an analytics account, or post to a social platform.</p></Card></div>}
-    <ClaudeAdvisor context={context}/>
-  </div>;
+const contentTemplate =
+  "platform,account,content_id,date,published_at,title,caption,keywords,format,ownership,url,views,impressions,clicks,likes,comments,shares,saves\nyoutube,@mychannel,video-001,2026-10-15,2026-10-01,My balcony garden,A practical tour,balcony garden|small spaces,video,owned,https://example.com/video,120,500,12,8,2,1,3";
+const queryTemplate =
+  "platform,account,date,keyword,views,impressions,clicks\nyoutube,@mychannel,2026-10-15,balcony garden,40,400,20";
+export default function SocialSeo({
+  domain,
+  claudeEnabled = false,
+  onIntegrations,
+}: {
+  domain: string;
+  claudeEnabled?: boolean;
+  onIntegrations: () => void;
+}) {
+  const [dataset, setDataset] = useState<"imported" | "example">(() => new URLSearchParams(location.search).get('dataset') === 'example' ? 'example' : 'imported');
+  const [platform, setPlatform] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [term, setTerm] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [tab, setTab] = useState("Overview");
+  const [performance, setPerformance] = useState<Performance>();
+  const [revision, setRevision] = useState(0);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [metric, setMetric] = useState<MetricKey>("views");
+  const [importOpen, setImportOpen] = useState(false);
+  const [kind, setKind] = useState<"content" | "queries">("content");
+  const [text, setText] = useState("");
+  const [daily, setDaily] = useState(false);
+  const [preview, setPreview] = useState<ImportPreview>();
+  const [referenceId, setReferenceId] = useState("");
+  const [scope, setScope] = useState("platform");
+  const [similar, setSimilar] = useState<SimilarContent>();
+  const [liveKeyword, setLiveKeyword] = useState("");
+  const [live, setLive] = useState<YouTubeResearch>();
+  const [liveSort, setLiveSort] = useState("relevance");
+  const [aiOpen, setAiOpen] = useState(false);
+  const [notice, setNotice] = useState("");
+  const parameters = new URLSearchParams({
+    dataset,
+    platform,
+    keyword,
+    ...(from ? { from } : {}),
+    ...(to ? { to } : {}),
+  }).toString();
+  useEffect(() => {
+    let active = true;
+    setError("");
+    api<Performance>(`/social/performance?${parameters}`)
+      .then((value) => {
+        if (active) {
+          setPerformance(value);
+          setReferenceId("");
+          setSimilar(undefined);
+        }
+      })
+      .catch((e) => {
+        if (active) {
+          setError(e.message);
+          setPerformance(undefined);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [parameters, revision]);
+  useEffect(() => {
+    let active = true;
+    setSimilar(undefined);
+    if (!referenceId) return;
+    api<SimilarContent>(
+      `/social/similar?${parameters}&referenceId=${encodeURIComponent(referenceId)}&scope=${scope}`,
+    )
+      .then((value) => {
+        if (active) setSimilar(value);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [parameters, referenceId, scope]);
+  async function run(task: () => Promise<void>) {
+    setBusy(true);
+    setError("");
+    try {
+      await task();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const isCurrent = Boolean(performance && performance.dataset === dataset && performance.filters.platform === platform && performance.filters.keyword === keyword && (performance.filters.from || '') === from && (performance.filters.to || '') === to);
+  const hasData = Boolean(
+    isCurrent && performance &&
+      (performance.coverage.contentRows || performance.coverage.queryRows),
+  );
+  function exportReport() {
+    if (performance)
+      download(
+        `waypoint-social-${dataset}.json`,
+        JSON.stringify(performance, null, 2),
+        "application/json",
+      );
+  }
+  const trend = performance?.series || [];
+  const max = Math.max(1, ...trend.map((row) => row[metric] || 0));
+  return (
+    <div className="performance-workspace">
+      <div className="performance-intro">
+        <div>
+          <span className="eyebrow">SOCIAL INTELLIGENCE</span>
+          <h2>Know what earns attention.</h2>
+          <p>
+            See which topics move, which content connects, and where to go next.
+          </p>
+        </div>
+        <div className="performance-intro-actions">
+          <button
+            className="button secondary"
+            onClick={() => setImportOpen(true)}
+          >
+            <FileUp size={15} />
+            Import performance
+          </button>
+          <button
+            className="button primary"
+            onClick={() => setTab("Live research")}
+          >
+            <Radio size={15} />
+            Research live
+          </button>
+        </div>
+      </div>
+      <div className="performance-source">
+        <div>
+          <span
+            className={`source-dot ${dataset === "example" ? "example" : ""}`}
+          />
+          <strong>
+            {dataset === "example"
+              ? "Example workspace"
+              : "Your performance data"}
+          </strong>
+          <span>
+            {dataset === "example"
+              ? "Fictional accounts · explore the analysis"
+              : performance?.coverage.importedAt
+                ? `Last import ${new Date(performance.coverage.importedAt).toLocaleDateString()}`
+                : "No accounts or files connected yet"}
+          </span>
+        </div>
+        <div className="source-toggle">
+          <button
+            aria-pressed={dataset === "imported"}
+            className={dataset === "imported" ? "selected" : ""}
+            onClick={() => setDataset("imported")}
+          >
+            My data
+          </button>
+          <button
+            aria-pressed={dataset === "example"}
+            className={dataset === "example" ? "selected" : ""}
+            onClick={() => setDataset("example")}
+          >
+            Explore example
+          </button>
+        </div>
+      </div>
+      <div className="performance-filter">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setKeyword(term);
+          }}
+        >
+          <Search size={17} />
+          <input
+            aria-label="Search social keyword"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            maxLength={200}
+            placeholder="Research a keyword or topic…"
+          />
+          <button className="button primary small">Explore</button>
+        </form>
+        <select
+          aria-label="Performance platform"
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+        >
+          <option value="all">All platforms</option>
+          {platforms.map((p) => (
+            <option key={p} value={p}>
+              {labels[p]}
+            </option>
+          ))}
+        </select>
+        <label>
+          From
+          <input
+            aria-label="Performance start date"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </label>
+        <label>
+          To
+          <input
+            aria-label="Performance end date"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </label>
+        <button
+          className="icon-button"
+          aria-label="Reset performance filters"
+          onClick={() => {
+            setFrom("");
+            setTo("");
+            setPlatform("all");
+            setKeyword("");
+            setTerm("");
+          }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+      <div className="performance-tabs" aria-label="Performance sections">
+        {[
+          "Overview",
+          "Keyword performance",
+          "Similar content",
+          "Competitors",
+          "Live research",
+        ].map((name) => (
+          <button
+            key={name}
+            aria-pressed={tab === name}
+            className={tab === name ? "selected" : ""}
+            onClick={() => setTab(name)}
+          >
+            {name}
+          </button>
+        ))}
+        <button
+          className="text-button performance-export"
+          onClick={exportReport}
+          disabled={!hasData}
+        >
+          <ArrowDownToLine size={14} />
+          Export
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="social-error">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="social-success">
+          {notice}
+        </p>
+      )}
+      {dataset === "example" && (
+        <p className="example-disclosure">
+          EXAMPLE DATA — these figures are fictional. Import or connect data to
+          assess real performance.
+        </p>
+      )}
+      {tab !== "Live research" && !hasData && (
+        <div className="performance-empty">
+          <div className="performance-empty-art">
+            <BarChart3 size={43} />
+          </div>
+          <span className="eyebrow">START WITH YOUR NUMBERS</span>
+          <h3>Performance needs a source.</h3>
+          <p>
+            Import daily post metrics or search-query exports from any major
+            platform. Compare your content, track query clicks, and benchmark
+            the accounts you include.
+          </p>
+          <div>
+            <button
+              className="button primary"
+              onClick={() => setImportOpen(true)}
+            >
+              <FileUp size={15} />
+              Import a dataset
+            </button>
+            <button
+              className="button secondary"
+              onClick={() => setDataset("example")}
+            >
+              Explore the example <ArrowRight size={15} />
+            </button>
+          </div>
+          <button className="text-button" onClick={onIntegrations}>
+            View API and Claude integrations <ArrowUpRight size={14} />
+          </button>
+        </div>
+      )}
+      {hasData && performance && tab === "Overview" && (
+        <>
+          <div className="performance-kpis">
+            {(
+              [
+                { key: "views", name: "Content views", icon: BarChart3 },
+                { key: "impressions", name: "Impressions", icon: Layers3 },
+                { key: "clicks", name: "Content clicks", icon: ArrowUpRight },
+              ] as const
+            ).map((item) => {
+              const current = performance.totals[item.key];
+              const previous = performance.previousTotals[item.key];
+              const change =
+                performance.comparison.metricComparable[item.key] && current !== null && previous !== null && previous > 0
+                  ? ((current - previous) / previous) * 100
+                  : null;
+              return (
+                <div className="performance-kpi" key={item.key}>
+                  <div>
+                    {item.name}
+                    <item.icon size={17} />
+                  </div>
+                  <strong>{fmt(current)}</strong>
+                  <small>
+                    {change === null
+                      ? "No comparable previous total"
+                      : `${change >= 0 ? "+" : ""}${change.toFixed(1)}% vs previous equal-length period`}
+                  </small>
+                  <span>
+                    {performance.coverage.metrics[item.key]} daily rows with
+                    this metric
+                  </span>
+                </div>
+              );
+            })}
+            <div className="performance-kpi">
+              <div>
+                Content tracked
+                <Hash size={17} />
+              </div>
+              <strong>{performance.posts.length}</strong>
+              <small>
+                {performance.coverage.accounts} account/platform combinations
+              </small>
+              <span>
+                {performance.coverage.contentRows} daily content observations
+              </span>
+            </div>
+          </div>
+          <div className="performance-charts">
+            <Panel
+              title="Performance over time"
+              detail={`${performance.period.from} — ${performance.period.to} · daily totals; gaps are unknown`}
+              action={
+                <select
+                  aria-label="Trend metric"
+                  value={metric}
+                  onChange={(e) => setMetric(e.target.value as MetricKey)}
+                >
+                  <option value="views">Views</option>
+                  <option value="impressions">Impressions</option>
+                  <option value="clicks">Clicks</option>
+                </select>
+              }
+            >
+              <div
+                className="performance-bar-chart"
+                role="img"
+                aria-label={`Daily ${metric} chart`}
+              >
+                {trend.map((row) => (
+                  <div
+                    key={row.date}
+                    title={`${row.date}: ${row[metric] === null ? "unknown" : row[metric]}`}
+                  >
+                    <span
+                      className={row[metric] === null ? "unknown" : ""}
+                      style={{
+                        height: `${row[metric] === null ? 4 : Math.max(2, (row[metric] / max) * 100)}%`,
+                      }}
+                    />
+                    <small>{row.date.slice(8)}</small>
+                  </div>
+                ))}
+              </div>
+              <div className="chart-footnote">
+                Daily {metric} · missing values are not treated as zero.
+              </div>
+            </Panel>
+            <Panel
+              title="Formats that connect"
+              detail="Median views per content item within this window"
+            >
+              <div className="format-list">
+                {performance.formats.map((format, i) => (
+                  <div key={format.format}>
+                    <span className="format-rank">0{i + 1}</span>
+                    <div>
+                      <strong>{format.format}</strong>
+                      <small>{format.posts} content items</small>
+                    </div>
+                    <span>
+                      {fmt(format.medianViews)}
+                      <small>median views</small>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="performance-note">
+                Format and account size affect comparisons. These figures show
+                association, not what caused the results.
+              </p>
+            </Panel>
+          </div>
+          <Panel
+            title="Content leaderboard"
+            detail="Daily observation totals, with coverage shown for each item"
+            action={
+              <span className="tag">{performance.posts.length} items</span>
+            }
+          >
+            <div className="table-wrap">
+              <table className="performance-table">
+                <thead>
+                  <tr>
+                    <th>Content / account</th>
+                    <th>Platform</th>
+                    <th>Views</th>
+                    <th>Engagement / views</th>
+                    <th>Observed days</th>
+                    <th>Compare</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performance.posts.map((post) => (
+                    <tr key={identity(post)}>
+                      <td>
+                        <strong>{post.title}</strong>
+                        <small>
+                          {post.account} · {post.ownership} · {post.format}
+                        </small>
+                      </td>
+                      <td>
+                        <span className={`platform-pill ${post.platform}`}>
+                          {labels[post.platform]}
+                        </span>
+                      </td>
+                      <td>{fmt(post.views)}</td>
+                      <td>
+                        {percent(post.engagementRate)}
+                        <small>
+                          {post.metricCoverage}/{post.days} complete rows
+                        </small>
+                      </td>
+                      <td>{post.days}</td>
+                      <td>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setReferenceId(identity(post));
+                            setTab("Similar content");
+                          }}
+                        >
+                          Find similar <ArrowRight size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </>
+      )}
+      {hasData && performance && tab === "Keyword performance" && (
+        <>
+          <Panel
+            title="Search-query performance"
+            detail="Measured query rows you supply. Only this table represents query-level metrics."
+          >
+            <div className="table-wrap">
+              <table className="performance-table">
+                <thead>
+                  <tr>
+                    <th>Search query</th>
+                    <th>Platforms</th>
+                    <th>Impressions</th>
+                    <th>Clicks</th>
+                    <th>CTR</th>
+                    <th>Query views</th>
+                    <th>Daily clicks trend</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performance.queries.map((row) => (
+                    <tr key={row.keyword}>
+                      <td>
+                        <strong>{row.keyword}</strong>
+                        <small>{row.observations} daily observations</small>
+                      </td>
+                      <td>{row.platforms.map((p) => labels[p]).join(", ")}</td>
+                      <td>{fmt(row.impressions)}</td>
+                      <td>{fmt(row.clicks)}</td>
+                      <td>{percent(row.ctr)}</td>
+                      <td>{fmt(row.views)}</td>
+                      <td><div className="query-sparkline" role="img" aria-label={`Daily recorded clicks for ${row.keyword}`}>{row.history.map(day => <span key={day.date} title={`${day.date}: ${day.clicks === null ? 'unknown' : day.clicks} clicks`} style={{ height: `${day.clicks === null ? 4 : Math.max(3, day.clicks / Math.max(1, ...row.history.map(value => value.clicks || 0)) * 30)}px`, opacity: day.clicks === null ? .25 : 1 }}/>)}</div><small>{row.history.length} dates reported</small></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!performance.queries.length && (
+              <div className="inline-empty">
+                <Hash size={25} />
+                <p>
+                  No query observations in this selection. Import a search-query
+                  dataset to see actual keyword metrics.
+                </p>
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    setKind("queries");
+                    setPreview(undefined);
+                    setText("");
+                    setImportOpen(true);
+                  }}
+                >
+                  Import queries <ArrowRight size={14} />
+                </button>
+              </div>
+            )}
+          </Panel>
+          <Panel
+            title="Topics associated with content"
+            detail="Full views of posts tagged with a topic. This is not keyword search volume, and topics can overlap."
+          >
+            <div className="table-wrap">
+              <table className="performance-table">
+                <thead>
+                  <tr>
+                    <th>Topic / keyword</th>
+                    <th>Matching content</th>
+                    <th>Content views</th>
+                    <th>Engagement / views</th>
+                    <th>Explore</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {performance.topics.map((row) => (
+                    <tr key={row.keyword}>
+                      <td>
+                        <strong>{row.keyword}</strong>
+                      </td>
+                      <td>{row.posts}</td>
+                      <td>{fmt(row.views)}</td>
+                      <td>{percent(row.engagementRate)}</td>
+                      <td>
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            setKeyword(row.keyword);
+                            setTerm(row.keyword);
+                            setTab("Overview");
+                          }}
+                        >
+                          View content <ArrowRight size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Panel>
+        </>
+      )}
+      {hasData && performance && tab === "Similar content" && (
+        <Panel
+          title="Find your closest comparisons"
+          detail="Compare related titles and topic tags, then inspect the performance gap."
+        >
+          <div className="similar-select">
+            <label>
+              Reference content
+              <select
+                aria-label="Reference content"
+                value={referenceId}
+                onChange={(e) => setReferenceId(e.target.value)}
+              >
+                <option value="">Choose a content item</option>
+                {performance.posts.map((row) => (
+                  <option key={identity(row)} value={identity(row)}>
+                    {labels[row.platform]} · {row.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Comparison scope
+              <select
+                aria-label="Similarity scope"
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
+              >
+                <option value="platform">Same platform</option>
+                <option value="all">All platforms (directional)</option>
+              </select>
+            </label>
+          </div>
+          {similar ? (
+            <>
+              <div className="reference-card">
+                <span className="tag">REFERENCE</span>
+                <h3>{similar.reference.title}</h3>
+                <p>
+                  {similar.reference.account} ·{" "}
+                  {labels[similar.reference.platform]} ·{" "}
+                  {fmt(similar.reference.views)} views ·{" "}
+                  {similar.reference.days} observed days
+                </p>
+              </div>
+              <div className="table-wrap">
+                <table className="performance-table">
+                  <thead>
+                    <tr>
+                      <th>Similar content</th>
+                      <th>Topic overlap</th>
+                      <th>Views</th>
+                      <th>View difference</th>
+                      <th>Days</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {similar.matches.map((row) => (
+                      <tr key={identity(row)}>
+                        <td>
+                          <strong>{row.title}</strong>
+                          <small>
+                            {row.account} · {labels[row.platform]} ·{" "}
+                            {row.ownership}
+                          </small>
+                        </td>
+                        <td>
+                          <span className="overlap-meter">
+                            <span style={{ width: `${row.similarity}%` }} />
+                          </span>
+                          {row.similarity}%
+                          <small>{row.sharedTerms.join(", ")}</small>
+                        </td>
+                        <td>{fmt(row.views)}</td>
+                        <td>
+                          {row.viewsDifference === null
+                            ? "—"
+                            : `${row.viewsDifference >= 0 ? "+" : "−"}${fmt(Math.abs(row.viewsDifference))}`}
+                        </td>
+                        <td>{row.days}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!similar.matches.length && (
+                <div className="inline-empty">
+                  No related titles/tags in this scope. Add comparable content
+                  or broaden the platform scope.
+                </div>
+              )}
+              <p className="performance-note">{similar.method}</p>
+            </>
+          ) : (
+            <div className="inline-empty">
+              <Layers3 size={28} />
+              <p>Choose a post to compare similar content from your dataset.</p>
+            </div>
+          )}
+        </Panel>
+      )}
+      {hasData && performance && tab === "Competitors" && (
+        <Panel
+          title="Account benchmarks"
+          detail="Owned and competitor observations you supplied. No private competitor analytics are inferred."
+        >
+          <div className="table-wrap">
+            <table className="performance-table">
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Platform</th>
+                  <th>Relationship</th>
+                  <th>Content items</th>
+                  <th>Views</th>
+                  <th>Engagement / views</th>
+                </tr>
+              </thead>
+              <tbody>
+                {performance.accounts.map((row) => (
+                  <tr key={`${row.platform}:${row.account}`}>
+                    <td>
+                      <strong>{row.account}</strong>
+                    </td>
+                    <td>{labels[row.platform]}</td>
+                    <td>
+                      <span
+                        className={`tag ${row.ownership === "owned" ? "" : "amber"}`}
+                      >
+                        {row.ownership}
+                      </span>
+                    </td>
+                    <td>{row.posts}</td>
+                    <td>{fmt(row.views)}</td>
+                    <td>{percent(row.engagementRate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="performance-note">
+            Compare the same date range and metric definitions. Audience size,
+            age, and incomplete reporting can change the interpretation.
+          </p>
+        </Panel>
+      )}
+      {tab === "Live research" && (
+        <Panel
+          title="Live YouTube discovery"
+          detail="Find videos for a keyword and compare public lifetime performance."
+        >
+          <form
+            className="live-research-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void run(async () => {
+                setLive(undefined);
+                setLive(
+                  await api<YouTubeResearch>("/social/research/youtube", {
+                    keyword: liveKeyword,
+                    sort: liveSort,
+                  }),
+                );
+              });
+            }}
+          >
+            <Search size={18} />
+            <input
+              aria-label="Live YouTube keyword"
+              required
+              minLength={2}
+              maxLength={150}
+              value={liveKeyword}
+              onChange={(e) => setLiveKeyword(e.target.value)}
+              placeholder="e.g. balcony garden"
+            />
+            <select
+              aria-label="YouTube research sort"
+              value={liveSort}
+              onChange={(e) => setLiveSort(e.target.value)}
+            >
+              <option value="relevance">Most relevant</option>
+              <option value="viewCount">Most viewed</option>
+              <option value="date">Newest</option>
+            </select>
+            <button className="button primary" disabled={busy}>
+              {busy ? "Researching…" : "Search YouTube"}
+              <ArrowRight size={15} />
+            </button>
+          </form>
+          {live ? (
+            <>
+              <p className="live-source">
+                <Radio size={13} />
+                YouTube Data API · collected{" "}
+                {new Date(live.collectedAt).toLocaleString()}
+              </p>
+              <div className="table-wrap">
+                <table className="performance-table">
+                  <thead>
+                    <tr>
+                      <th>Video / channel</th>
+                      <th>Lifetime views</th>
+                      <th>Views / day of age</th>
+                      <th>Likes</th>
+                      <th>Comments</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {live.results.map((row) => (
+                      <tr key={row.id}>
+                        <td>
+                          <a href={row.url} target="_blank" rel="noreferrer">
+                            <strong>{row.title}</strong>
+                            <ArrowUpRight size={12} />
+                          </a>
+                          <small>
+                            {row.channel} · published{" "}
+                            {row.publishedAt.slice(0, 10)} · {row.daysOld} days
+                            old
+                          </small>
+                        </td>
+                        <td>{fmt(row.views)}</td>
+                        <td>{fmt(row.viewsPerDay)}</td>
+                        <td>{fmt(row.likes)}</td>
+                        <td>{fmt(row.comments)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="performance-note">{live.disclosure}</p>
+            </>
+          ) : (
+            <div className="live-info">
+              <Radio size={28} />
+              <h3>Research beyond your own posts.</h3>
+              <p>
+                The native connector uses your server’s YouTube API key. Public
+                discovery provides views, likes, comments, and publication
+                dates. These are video totals, not keyword search volume.
+              </p>
+              <button className="text-button" onClick={onIntegrations}>
+                API setup and platform support <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+          <p className="performance-note">
+            Instagram, TikTok, LinkedIn, Facebook, X, Pinterest and Threads
+            currently support CSV/JSON ingestion. Native account authorization
+            and direct sync for those platforms are not implemented.
+          </p>
+        </Panel>
+      )}
+      {performance && hasData && (
+        <div className="performance-methods">
+          <span>
+            <Check size={13} />
+            Source and metric coverage retained
+          </span>
+          <p>
+            {performance.disclosure} Engagement/views uses only daily rows with
+            views and all four interaction fields (likes + comments + shares +
+            saves). Unknown values show “—”. Previous period: {performance.period.previousFrom || 'unavailable'} — {performance.period.previousTo || 'unavailable'}. Coverage: {performance.comparison.currentDays}/{performance.comparison.expectedDays} current days, {performance.comparison.previousDays}/{performance.comparison.expectedDays} previous days.
+          </p>
+        </div>
+      )}
+      {claudeEnabled && (
+        <div className="optional-ai">
+          <button
+            className="button secondary"
+            onClick={() => setAiOpen(!aiOpen)}
+          >
+            {aiOpen ? "Close" : "Analyze this data with Claude"}
+            <ArrowRight size={14} />
+          </button>
+          {aiOpen && (
+            <ClaudeAdvisor
+              context={JSON.stringify({ performance, similar, live }).slice(
+                0,
+                16000,
+              )}
+            />
+          )}
+        </div>
+      )}
+      <details className="publishing-tools">
+        <summary>
+          Sharing metadata and publishing utilities <ChevronDown size={15} />
+        </summary>
+        <SocialTools domain={domain} />
+      </details>
+      {importOpen && (
+        <div className="import-backdrop">
+          <section
+            className="import-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-title"
+          >
+            <div className="import-heading">
+              <div>
+                <span className="eyebrow">CONNECT YOUR NUMBERS</span>
+                <h2 id="import-title">Import performance data</h2>
+              </div>
+              <button
+                className="icon-button"
+                aria-label="Close import"
+                onClick={() => setImportOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="import-explainer">
+              Map your export to this template. Each row must contain{" "}
+              <strong>daily increments</strong>, not cumulative lifetime totals.
+              Blank metrics stay unknown.
+            </p>
+            <div className="import-kind">
+              <button
+                aria-pressed={kind === "content"}
+                className={kind === "content" ? "selected" : ""}
+                onClick={() => {
+                  setKind("content");
+                  setPreview(undefined);
+                  setText("");
+                  setDaily(false);
+                }}
+              >
+                Content metrics
+              </button>
+              <button
+                aria-pressed={kind === "queries"}
+                className={kind === "queries" ? "selected" : ""}
+                onClick={() => {
+                  setKind("queries");
+                  setPreview(undefined);
+                  setText("");
+                  setDaily(false);
+                }}
+              >
+                Search-query metrics
+              </button>
+              <button
+                className="text-button"
+                onClick={() =>
+                  download(
+                    `waypoint-${kind}-template.csv`,
+                    kind === "content" ? contentTemplate : queryTemplate,
+                    "text/csv",
+                  )
+                }
+              >
+                <ArrowDownToLine size={13} />
+                Template
+              </button>
+            </div>
+            <label className="import-file">
+              Choose CSV file
+              <input
+                aria-label="Performance CSV file"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file)
+                    void run(async () => {
+                      if (file.size > 900000)
+                        throw new Error("Choose a CSV below 900 KB.");
+                      setText(await file.text());
+                      setPreview(undefined);
+                    });
+                }}
+              />
+            </label>
+            <label htmlFor="performance-csv">Or paste your mapped CSV</label>
+            <textarea
+              id="performance-csv"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setPreview(undefined);
+              }}
+              maxLength={900000}
+              placeholder={kind === "content" ? contentTemplate : queryTemplate}
+            />
+            <label className="daily-confirm">
+              <input
+                type="checkbox"
+                checked={daily}
+                onChange={(e) => setDaily(e.target.checked)}
+              />
+              I confirm these rows are daily increments. A repeat import
+              replaces the same content/query day.
+            </label>
+            <div className="import-actions">
+              <button
+                className="button secondary"
+                disabled={busy || !text || !daily}
+                onClick={() =>
+                  void run(async () =>
+                    setPreview(
+                      await api<ImportPreview>("/social/import/preview", {
+                        kind,
+                        csv: text,
+                        metricBasis: "daily",
+                      }),
+                    ),
+                  )
+                }
+              >
+                Validate & preview
+              </button>
+              <button
+                className="button primary"
+                disabled={busy || !daily || !preview?.valid}
+                onClick={() =>
+                  void run(async () => {
+                    const result = await api<{ imported: number }>(
+                      "/social/import",
+                      { kind, csv: text, metricBasis: "daily" },
+                    );
+                    setNotice(
+                      `Imported ${result.imported} daily observations. Your existing workspace is preserved.`,
+                    );
+                    setDataset("imported");
+                    setFrom("");
+                    setTo("");
+                    setKeyword("");
+                    setTerm("");
+                    setPlatform("all");
+                    setRevision((v) => v + 1);
+                    setTab(kind === "queries" ? "Keyword performance" : "Overview");
+                    setImportOpen(false);
+                    setPreview(undefined);
+                  })
+                }
+              >
+                Import{" "}
+                {preview?.valid ? `${preview.rows} rows` : "validated data"}
+                <ArrowRight size={14} />
+              </button>
+            </div>
+            {preview && (
+              <div
+                className={`import-preview ${preview.valid ? "valid" : "invalid"}`}
+              >
+                <strong>
+                  {preview.valid
+                    ? `${preview.rows} rows ready`
+                    : "Fix these rows before importing"}
+                </strong>
+                {preview.errors.map((e, i) => (
+                  <p key={i}>
+                    Row {e.row}: {e.message}
+                  </p>
+                ))}
+                {preview.valid && (
+                  <pre>
+                    {JSON.stringify(preview.preview.slice(0, 2), null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
+            {error && (
+              <p className="social-error" role="alert">
+                {error}
+              </p>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
 }

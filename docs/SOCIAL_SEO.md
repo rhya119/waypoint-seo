@@ -1,6 +1,6 @@
 # Social SEO module
 
-The module adds practical sharing and editorial tools without social-account credentials. It does not publish posts, scrape social networks, infer engagement, or provide real-time hashtag trends.
+This document covers the **secondary publishing utilities** retained under the Social SEO dashboard. The main v0.3 feature is now measured keyword/content performance: see [performance data](PERFORMANCE_DATA.md). These publishing utilities do not publish posts, scrape social networks, infer engagement, or provide real-time hashtag trends.
 
 ## Sharing audit and metadata builder
 
@@ -22,4 +22,4 @@ Building a link does not create a short URL or collect clicks. The destination's
 
 ## Claude assistance
 
-The module's Claude advisor can suggest original captions, edits and metadata based on the selected content. A click explicitly sends the bounded workspace context to Anthropic through the server. No API key means an honest setup state, not simulated advice. See [Claude setup](CLAUDE.md).
+Claude is now an optional platform integration, off by default. Enable it under Integrations to analyze the selected performance context explicitly. No API key means an honest setup state, not simulated advice. See [Claude setup](CLAUDE.md) and [whole-platform plugin options](PLUGIN.md).

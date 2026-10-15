@@ -8,27 +8,44 @@ mkdirSync('artifacts', { recursive: true });
 const click = (step_id, selector) => ({ step_id, action: 'click', locator: { kind: 'css', selector }, timeout_ms: 10000 });
 const fill = (step_id, selector, value) => ({ step_id, action: 'fill', locator: { kind: 'css', selector }, value: { source: 'literal', value }, timeout_ms: 10000 });
 const wait = (step_id, selector) => ({ step_id, action: 'wait_for', locator: { kind: 'css', selector }, state: 'visible', timeout_ms: 10000 });
-const common = { browser: { mode: 'launch', executable_path: executable }, start_url: { url: 'http://127.0.0.1:4318/', query: [] }, capture: { after_each_step: ['screenshot'], at_end: ['accessibility', 'url', 'screenshot'], events: ['page-errors', 'downloads'] } };
+const select = (step_id, selector, value) => ({ step_id, action: 'select_option', locator: { kind: 'css', selector }, value: { source: 'literal', value }, timeout_ms: 10000 });
+const check = (step_id, selector) => ({ step_id, action: 'check', locator: { kind: 'css', selector }, timeout_ms: 10000 });
+const baseUrl = process.env.QA_BASE_URL || 'http://127.0.0.1:4318';
+const common = { browser: { mode: 'launch', executable_path: executable }, start_url: { url: `${baseUrl}/#domain-overview`, query: [] }, capture: { after_each_step: process.env.QA_LIGHT_CAPTURE ? [] : ['screenshot'], at_end: ['accessibility', 'url', 'screenshot'], events: ['page-errors', 'downloads'] } };
 const socialActions = [
-  wait('ready', '.chart svg'), click('social_module', 'nav button:nth-child(8)'), wait('social_form', '#social-html'),
-  click('audit_social', '.social-grid form button'), wait('audit_findings', '.social-check-grid'),
-  click('generate_meta', '.social-module > .panel form button.secondary'), wait('metadata_output', '#social-snippet'),
-  click('content_tab', '.social-tabs button:nth-child(2)'), click('review_caption', '.social-grid form button'), wait('caption_findings', '.social-check-list'),
-  click('campaign_tab', '.social-tabs button:nth-child(3)'), click('build_link', '.social-grid form button'), wait('tracked_url', '#campaign-result'),
-  wait('claude_setup', '.claude-body .setup-note'), click('connector_guide', '.connector-guide summary'),
+  wait('ready', '.chart svg'), click('social_module', 'nav button:nth-child(8)'), wait('performance_source', '.performance-source'),
+  click('choose_example', '.source-toggle button:nth-child(2)'), wait('performance_metrics', '.performance-kpis'),
+  click('keyword_performance', '.performance-tabs button:nth-child(2)'), wait('query_table', '.performance-workspace > section.panel:first-of-type tbody tr:first-child'),
+  click('similar_content', '.performance-tabs button:nth-child(3)'), select('reference', 'select[aria-label="Reference content"]', '["youtube","@northstar","example-0"]'), wait('similar_results', '.reference-card'),
+  click('competitors', '.performance-tabs button:nth-child(4)'), wait('competitor_rows', '.performance-workspace > section.panel tbody tr:first-child'),
+  click('integrations', 'nav button:nth-child(9)'), wait('optional_claude', '[role="switch"][aria-checked="false"]'),
+  click('enable_advisor', '[role="switch"]'), wait('enabled', '[role="switch"][aria-checked="true"]'),
+  click('disable_advisor', '[role="switch"]'), wait('disabled', '[role="switch"][aria-checked="false"]'),
+];
+const importCsv = 'platform,account,content_id,date,published_at,title,keywords,format,ownership,views,impressions,clicks,likes,comments,shares,saves\nyoutube,@qa-account,qa-1,2026-10-15,2026-10-01,QA balcony garden tutorial,balcony garden,video,owned,100,500,20,6,1,2,3\nyoutube,@qa-competitor,qa-2,2026-10-15,2026-10-01,QA balcony garden ideas,balcony garden,video,competitor,200,700,25,10,2,4,5';
+const queryCsv = 'platform,account,date,keyword,views,impressions,clicks\nyoutube,@qa-account,2026-10-15,balcony garden,40,200,10';
+const importActions = [
+  wait('ready', '.chart svg'), click('social_module', 'nav button:nth-child(8)'), click('open_import', '.performance-intro-actions button:first-child'),
+  fill('paste_content_csv', '#performance-csv', importCsv), check('daily_basis', '.daily-confirm input'), click('preview_content', '.import-actions .secondary'), wait('content_validated', '.import-preview.valid'), click('save_content', '.import-actions .primary'), wait('saved_metrics', '.performance-kpis'),
+  { step_id: 'reload_saved', action: 'goto', destination: { url: `${baseUrl}/#social-seo`, query: [] }, wait_until: 'load', timeout_ms: 10000 }, wait('persisted_metrics', '.performance-kpis'),
+  click('import_queries', '.performance-intro-actions button:first-child'), click('query_kind', '.import-kind button:nth-child(2)'), fill('paste_query_csv', '#performance-csv', queryCsv), check('query_daily_basis', '.daily-confirm input'), click('preview_queries', '.import-actions .secondary'), wait('queries_validated', '.import-preview.valid'), click('save_queries', '.import-actions .primary'), wait('query_metrics', '.performance-workspace > section.panel:first-of-type tbody tr:first-child'),
+  click('live_tab', '.performance-tabs button:nth-child(5)'), fill('live_keyword', 'input[aria-label="Live YouTube keyword"]', 'balcony garden'), click('live_search', '.live-research-form button'), wait('missing_youtube_key', '.performance-workspace > .social-error'),
 ];
 const scenarios = [
+  ['performance-design', { ...common, start_url: { url: `${baseUrl}/?dataset=example#social-seo`, query: [] }, environment: { viewport: { width: 1440, height: 1080 } }, actions: [wait('overview', '.performance-kpis')] }],
+  ['performance-design-mobile', { ...common, start_url: { url: `${baseUrl}/?dataset=example#social-seo`, query: [] }, environment: { viewport: { width: 390, height: 844 } }, actions: [wait('overview', '.performance-kpis')] }],
   ['desktop', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: [wait('overview', '.chart svg')] }],
   ['mobile', { ...common, environment: { viewport: { width: 390, height: 844 } }, actions: [wait('overview', '.chart svg')] }],
   ['social', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: socialActions }],
   ['social-mobile', { ...common, environment: { viewport: { width: 390, height: 844 } }, actions: socialActions }],
+  ['performance-import', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: importActions }],
   ['flows', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: [
     wait('ready', '.chart svg'), click('keywords', 'nav button:nth-child(2)'), click('research', '.inline-form button'), wait('keyword_rows', 'tbody tr:first-child'),
     click('track', 'tbody tr:first-child button'), wait('saved_project', '#project'),
     click('backlinks', 'nav button:nth-child(3)'), wait('link_rows', 'tbody tr:first-child'),
     click('audit', 'nav button:nth-child(4)'), click('audit_run', '.audit-actions .primary'), wait('audit_results', '.audit-score'),
     click('ranks', 'nav button:nth-child(5)'), wait('saved_rank', 'tbody tr:first-child'),
-    { step_id: 'reload_ranks', action: 'goto', destination: { url: 'http://127.0.0.1:4318/#rank-tracking', query: [] }, wait_until: 'load', timeout_ms: 10000 },
+    { step_id: 'reload_ranks', action: 'goto', destination: { url: `${baseUrl}/#rank-tracking`, query: [] }, wait_until: 'load', timeout_ms: 10000 },
     wait('persisted_rank', 'tbody tr:first-child'), click('competitors', 'nav button:nth-child(6)'), wait('comparison', 'tbody tr:first-child .overlap'),
     click('reports', 'nav button:nth-child(7)'), click('build_report', '.report-card button'), wait('report_preview', '.report-preview'),
     click('download_report', '.report-preview .primary'),

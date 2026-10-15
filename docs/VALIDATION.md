@@ -2,6 +2,18 @@
 
 Completed 2026-10-16 on Windows with Node 24.19.0 and npm 12.0.2.
 
+## v0.3 — Performance redesign and optional whole-platform plugin
+
+The automated suite now includes **24 tests**: CSV quoting/multiline input, duplicates, invalid metrics/dates, atomic import rejection, replacement rather than double-counting, SQLite reopen persistence, missing-value/rate math, paired CTR denominators, topic/query separation, similarity scope, date filters and comparison coverage, local ingestion, default-off Claude settings, fixed-endpoint YouTube request/response fixtures, whole-platform stdio tools, plugin launcher lifecycle and bundle exclusions. Tests do not make live Claude or YouTube calls. Both keys remain unconfigured in the local application.
+
+The native Claude Code manifest validator returned **Validation passed**. A real SDK client discovered 17 tools through both direct stdio and the optional plugin launcher, called social-performance/keyword/similarity tools, and confirmed source labels. The existing private local Claude Code MCP registration still reports Connected. No new global plugin or Claude Desktop installation was performed.
+
+REA ran against a separate local server on port 4320 with an ignored QA-only SQLite database. Import Evidence `ev_93564d2440a22437b22d01db3a9e3dbc0ed76d294f702b6a02a4e630cfb47c54` completed all 24 steps, including CSV preview, content import, reload/persistence, query import and missing-YouTube-key handling, with zero page-error events and confirmed browser cleanup. No QA observations were added to the user's normal workspace.
+
+Mobile performance/integrations Evidence `ev_bd2ba263247445e0895b75ff8894902346c7f8a96687b7dfa751667856ee9778` completed 19 steps including example selection, query tables, similar content, competitor rows and enabling/disabling the optional advisor. After a stylesheet-order correction, final mobile design Evidence `ev_40edf26b953b8d2699c01a6c4325eb85188893961414106e50d87b052c35aac9` completed with confirmed cleanup. Desktop and mobile rendered screenshots were visually inspected; final sidebar contrast was corrected. Desktop REA captures completed their declared UI steps but intermittently reported a browser-cleanup timeout; retained screenshots are observations, not a claim of fully successful capture cleanup. Process inventory showed no remaining matching owned browsers.
+
+Native public YouTube discovery is implemented but not live-verified without `YOUTUBE_API_KEY`. Other major platforms support imports/normalized ingestion only; direct OAuth/account sync is not implemented. Query-level data depends on the source actually providing it. Similarity is lexical title/tag overlap, not semantic/video analysis. The downloadable `.plugin` is a ZIP-format source bundle requiring extraction and `npm ci`, not a verified one-click Desktop extension or hosted claude.ai connector.
+
 ## v0.2 — Social SEO and Claude
 
 `npm run check` passes **14 tests**, strict TypeScript checking and a production build. Added cases cover metadata attribute escaping and parser round-trips, first-image alternative associations, unsafe URL rejection, duplicate normalized Unicode hashtags, query/fragment-preserving UTM generation, social API validation, missing-key Claude behavior, sanitized upstream failures, token usage, output limits and the real Anthropic SDK wire request using a mocked fetch. No live Anthropic request was made: no API key is configured, and the status endpoint correctly returned `configured: false`.

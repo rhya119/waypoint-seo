@@ -6,6 +6,11 @@ import { auditHtml } from './audit.js';
 import { auditSocial } from './social.js';
 import { socialAuditInput, campaignInput, buildCampaignLink, captionInput, reviewCaption, metadataInput, buildSocialMetadata } from '../shared/social.js';
 import { createClaudeService, claudeInput, ClaudeError, type ClaudeService } from './claude.js';
+import { initPerformance, getPerformance, parseImport, saveImport, validateImport, importInput, ingestInput, similarContent, PerformanceError } from './performance.js';
+import { performanceFilters } from '../shared/performance.js';
+import { createYouTubeProvider, youtubeInput, YouTubeError, type YouTubeProvider } from './youtube.js';
+import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 export function normalizeDomain(value: string): string {
   const url = new URL(value.includes('://') ? value : `https://${value}`);
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port || !url.hostname.includes('.') || !/^[a-z0-9.-]+$/i.test(url.hostname)) throw new Error('Enter a valid domain, such as example.com.');
@@ -14,7 +19,8 @@ export function normalizeDomain(value: string): string {
 const domainSchema = z.string().trim().max(253).transform((value, ctx) => {
   try { return normalizeDomain(value); } catch { ctx.addIssue({ code: 'custom', message: 'Enter a valid HTTP(S) domain.' }); return z.NEVER; }
 });
-export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService()) {
+export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService(), youtube: YouTubeProvider = createYouTubeProvider()) {
+  initPerformance(db);
   db.exec(`PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS projects(id INTEGER PRIMARY KEY, domain TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS ranks(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), keyword TEXT NOT NULL, country TEXT NOT NULL, device TEXT NOT NULL, position INTEGER NOT NULL, previous INTEGER NOT NULL, checked_at TEXT NOT NULL, provenance TEXT NOT NULL DEFAULT 'demo', UNIQUE(project_id,keyword,country,device));`);
@@ -65,7 +71,26 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   app.post('/api/social/caption', (req, res) => res.json(reviewCaption(captionInput.parse(req.body))));
   app.post('/api/social/campaign', (req, res) => res.json(buildCampaignLink(campaignInput.parse(req.body))));
   app.get('/api/claude/status', (_req, res) => res.json(claude.status()));
-  app.post('/api/claude/recommend', async (req, res) => res.json(await claude.recommend(claudeInput.parse(req.body))));
+  app.post('/api/claude/recommend', async (req, res) => {
+    if ((db.prepare('SELECT value FROM settings WHERE key=?').get('claude_enabled') as { value: string } | undefined)?.value !== 'true') { res.status(403).json({ error: 'Enable the optional Claude advisor in Integrations first.' }); return; }
+    res.json(await claude.recommend(claudeInput.parse(req.body)));
+  });
+  app.get('/api/social/performance', (req, res) => res.json(getPerformance(db, performanceFilters.parse(req.query))));
+  app.get('/api/social/similar', (req, res) => {
+    const input = z.object({ ...performanceFilters.shape, referenceId: z.string().min(1).max(500), scope: z.enum(['platform', 'all']).default('platform') }).parse(req.query);
+    res.json(similarContent(getPerformance(db, performanceFilters.parse(input)), input.referenceId, input.scope));
+  });
+  app.post('/api/social/import/preview', (req, res) => { const input = importInput.parse(req.body); res.json(parseImport(input.kind, input.csv).preview); });
+  app.post('/api/social/import', (req, res) => { const input = importInput.parse(req.body); res.json(saveImport(db, input.kind, parseImport(input.kind, input.csv))); });
+  app.post('/api/social/ingest', (req, res) => { const input = ingestInput.parse(req.body); res.json(saveImport(db, input.kind, validateImport(input.kind, input.rows))); });
+  app.post('/api/social/research/youtube', async (req, res) => res.json(await youtube.research(youtubeInput.parse(req.body))));
+  app.get('/api/integrations', (_req, res) => res.json({
+    claude: { ...claude.status(), enabled: (db.prepare('SELECT value FROM settings WHERE key=?').get('claude_enabled') as { value: string } | undefined)?.value === 'true' },
+    youtube: youtube.status(), platforms: ['youtube', 'instagram', 'tiktok', 'linkedin', 'facebook', 'x', 'pinterest', 'threads'].map(platform => ({ platform, import: true, ingestionApi: true, nativeApi: platform === 'youtube' })),
+    plugin: { available: true, name: 'waypoint-seo', mode: 'optional-local-plugin', autoInstalled: false },
+  }));
+  app.put('/api/integrations/claude', (req, res) => { const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body); db.prepare('INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('claude_enabled', String(enabled)); res.json({ enabled }); });
+  app.get('/api/integrations/plugin', (_req, res) => { const path = resolve('artifacts/waypoint-seo.plugin'); if (!existsSync(path)) { res.status(404).json({ error: 'Prepare the source bundle with npm run plugin:package first.' }); return; } res.download(path, 'waypoint-seo.plugin'); });
   app.get('/api/reports', (req, res) => {
     const domain = domainSchema.parse(req.query.domain);
     const project = db.prepare('SELECT id FROM projects WHERE domain=?').get(domain) as { id: number } | undefined;
@@ -73,6 +98,7 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   });
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'API route not found.' }); });
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (error instanceof PerformanceError || error instanceof YouTubeError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof ClaudeError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof z.ZodError) { res.status(400).json({ error: error.issues[0]?.message || 'Invalid request.' }); return; }
     const status = (error as { status?: number }).status;

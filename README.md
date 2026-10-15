@@ -2,7 +2,9 @@
 
 An independent, local-first SEO research toolkit. Original branding, UI, source code, and architecture; inspired only by broad product categories in the SEO industry.
 
-**Status: v0.2 working scaffold with Social SEO and Claude integration.** Search metrics are deterministic synthetic examples, not actual traffic, keyword demand, backlinks, or search results. HTML/social audits and caption checks inspect submitted content. Local tools and the MCP connector need no API key; the built-in AI advisor uses the **Claude API** and requires `ANTHROPIC_API_KEY`. No affiliation with Semrush.
+**Status: v0.3 social-performance workspace with optional whole-platform Claude plugin.** Social SEO now analyzes imported daily post/query metrics, compares similar content and account benchmarks, and supports native public YouTube discovery when configured. Web SEO index metrics remain synthetic examples. Claude is optional and off by default in the dashboard. No affiliation with Semrush.
+
+Start at **Social SEO**. Use **My data** for imported observations, or explicitly select **Explore example** for a labeled fictional dataset. An empty real workspace never silently substitutes example metrics. See [performance-data setup](docs/PERFORMANCE_DATA.md) and [optional Claude plugin](docs/PLUGIN.md).
 
 ## Run locally
 
@@ -36,14 +38,24 @@ Open **http://127.0.0.1:4318**. The API serves the production frontend. This is 
 | Rank tracking | Save keywords per project/country/device; reload and remove baselines | Deterministic positions; no SERP fetching, daily jobs, or historical movement claims |
 | Competitor research | Traffic, keyword counts, and overlap comparison | Fictional comparison domains; no actual keyword-gap analysis |
 | Reporting | Preview a summary, export structured JSON, print/save PDF through browser | Includes provenance, analysis, and saved ranks; no scheduled delivery |
-| Social SEO | Open Graph/X-style share audit and illustrative previews, escaped metadata generator, caption/hashtag review, UTM campaign builder, exports | Actual local checks; no social accounts, analytics, live trends, image fetching, or posting |
-| Claude advisor + connector | Server-side Claude recommendations across the toolkit; local MCP server with ten tools for Claude Code/Desktop | API advisor needs your Anthropic key; MCP tools run locally with no extra API call |
+| Social SEO | Daily performance trends; query impressions/clicks/CTR; topic-associated content; similar-post comparisons; account benchmarks; native YouTube research | Imports and normalized ingestion for eight platforms; native public discovery only for YouTube; no fabricated metrics |
+| Publishing utilities | Share metadata, caption checks and campaign links under a secondary expandable section | Local markup/editorial checks, no posting |
+| Integrations + optional Claude plugin | Optional in-app AI toggle; whole-platform plugin with three skills and 17 MCP tools; source-bundle download | All platform tools work without Claude; advisor needs a separate Anthropic key; MCP uses the client's own model access |
 
-All `.example` names and sample content were authored for this project. No requests are sent to an entered domain or image URL. HTML is parsed on the local server without execution, and is not stored. Projects and ranks persist in the local SQLite database. Keyword research, social drafts, audits, AI responses, and report previews live in browser memory until refresh or navigation away from the module. The main report includes analysis and tracked ranks; audit and caption exports are separate. Clicking **Ask Claude** sends your prompt and current workspace context to Anthropic; API usage may be billed.
+All `.example` names and sample content were authored for this project. Entered domain/image URLs are not fetched. Native YouTube research calls fixed official Google API endpoints and reports public lifetime counters separately from daily observations. Imported content/query observations, projects, rank baselines and integration settings persist in local SQLite; drafts and AI responses are temporary. Social reports export separately from web SEO demo reports. Clicking Ask Claude explicitly sends bounded context to Anthropic and may incur API charges.
 
 ## Claude setup
 
-The AI provider is **Anthropic Claude**, not OpenAI. Add `ANTHROPIC_API_KEY` to the ignored local `.env`, optionally change `ANTHROPIC_MODEL`, and restart `npm run dev`. The default is `claude-sonnet-5-5`; choose a model available to your API account. No live model call is made until you click Ask Claude. No key is sent to the browser, embedded in exports, or passed through MCP.
+The optional advisor uses **Anthropic Claude**. Add `ANTHROPIC_API_KEY` to the ignored local `.env`, optionally change `ANTHROPIC_MODEL`, restart the server, and enable **Show Claude analysis** under **Integrations**. The default model is `claude-sonnet-5-5`; use a model your API account can access. No model call happens when enabling the toggle. Keys stay server-side.
+
+For the whole platform as an optional Claude Code plugin:
+
+```powershell
+npm ci
+claude --plugin-dir .
+```
+
+Or create a downloadable ZIP-format source bundle with `npm run plugin:package`. It excludes credentials, databases, dependencies and research captures; extract it and run `npm ci` before loading. This is a local source plugin, not a remotely hosted claude.ai connector. [Plugin options and tools](docs/PLUGIN.md).
 
 To connect Claude Code/Desktop to the toolkit:
 
@@ -68,8 +80,12 @@ server/provider.ts   Demo provider and provider seam
 server/audit.ts      Pure static HTML checks
 server/social.ts     Social markup parser and checklist
 server/claude.ts     Server-only Claude API adapter
+server/performance.ts CSV/JSON ingestion, SQLite analysis, comparisons
+server/youtube.ts    Native public YouTube discovery provider
 shared/social.ts     Validated metadata, caption and UTM helpers
 mcp/                 Local stdio connector for Claude clients
+skills/              Whole-platform Claude workflow skills
+.claude-plugin/      Optional Claude Code plugin manifest
 server/index.ts      Environment setup, database, local server
 tests/               Domain, provider, audit, API and CSV checks
 scripts/             Private GitHub push and REA browser QA helpers
@@ -86,6 +102,7 @@ docs/                Architecture, clean-room record, roadmap, validation
 | `SEO_PROVIDER` | `demo` | Only supported provider; other values fail startup |
 | `ANTHROPIC_API_KEY` | empty | Server-only Anthropic key for AI advice |
 | `ANTHROPIC_MODEL` | `claude-sonnet-5-5` | Configurable Claude API model ID |
+| `YOUTUBE_API_KEY` | empty | Optional native public YouTube discovery key |
 
 `.env`, database files, exports, raw REA captures, `node_modules`, and builds are ignored by Git. Never put provider keys in frontend variables or commit credentials. Google Fonts is optional presentation-only network access; system fonts are used when unavailable. Icons ship in the frontend bundle.
 
@@ -108,6 +125,15 @@ docs/                Architecture, clean-room record, roadmap, validation
 | POST | `/api/social/campaign` | `{ "url": "https://example.com/", "source": "instagram", "medium": "social", "campaign": "spring", "content": "guide" }` |
 | GET | `/api/claude/status` | Configured flag and model only, never the key |
 | POST | `/api/claude/recommend` | `{ "prompt": "What should I improve?", "context": "..." }` |
+| GET | `/api/social/performance` | `dataset=imported/example`, `platform`, `from`, `to`, `keyword` filters |
+| GET | `/api/social/similar` | Same filters plus JSON-array `referenceId` and `scope=platform/all` |
+| POST | `/api/social/import/preview` | `{ "kind": "content/queries", "metricBasis": "daily", "csv": "..." }` |
+| POST | `/api/social/import` | Validate and atomically upsert the same CSV format |
+| POST | `/api/social/ingest` | `{ "kind": "content/queries", "metricBasis": "daily", "rows": [...] }` from your API pipeline |
+| POST | `/api/social/research/youtube` | `{ "keyword": "balcony garden", "sort": "relevance" }` |
+| GET | `/api/integrations` | Actual key-presence flags, supported data paths, advisor setting |
+| PUT | `/api/integrations/claude` | `{ "enabled": true/false }`, persisted opt-in |
+| GET | `/api/integrations/plugin` | Download prepared source bundle |
 
 Supported tracking countries: NZ, US, GB, AU; devices: desktop, mobile. Validation failures return 400, unknown project 404, cross-origin browser writes 403, oversized requests 413. Duplicate saved domains and tracking tuples reuse existing rows.
 
@@ -125,7 +151,7 @@ For optional **REA** browser QA, start `npm start` after a build, then:
 node scripts/qa-rea.mjs "C:\Program Files\Google\Chrome\Application\chrome.exe"
 ```
 
-The helper invokes pinned `rea-agents@6.4.0` through npm's `npx-cli.js`, launches isolated browser profiles, checks desktop/mobile and core/social flows, writes ignored artifacts, and fails on incomplete steps. It needs network access for REA package acquisition, an installed browser, and a normal Node/npm installation. Set `NPX_CLI_PATH` if npm is installed elsewhere. Set `QA_SCENARIO=flows`, `social`, or `social-mobile` to run one scenario. Social scenarios verify the missing-key setup state and therefore expect Claude to be unconfigured. Browser QA creates a local sample project and rank baseline. See [validation](docs/VALIDATION.md) for actual results and limitations.
+The helper invokes pinned REA 6.4.0, launches isolated browser profiles and writes ignored artifacts. Use `QA_SCENARIO=social` or `social-mobile` for the performance/integrations flow, `performance-import` for real CSV import/reload/query handling, or `flows` for web SEO regression. `QA_BASE_URL` targets an isolated local server/database; `QA_LIGHT_CAPTURE=1` retains only final screenshots. Import QA writes explicitly named QA records, so use an isolated database. Requires Node/npm, a local Chrome executable and REA package access. See [validation](docs/VALIDATION.md).
 
 ## Private GitHub repository
 
