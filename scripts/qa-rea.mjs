@@ -1,0 +1,58 @@
+// Explicitly selected owned browser, isolated profile; no proprietary scripts or assets.
+// Usage: node scripts/qa-rea.mjs [absolute-browser-executable]
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { resolve, dirname } from 'node:path';
+const executable = process.argv[2] || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+mkdirSync('artifacts', { recursive: true });
+const click = (step_id, selector) => ({ step_id, action: 'click', locator: { kind: 'css', selector }, timeout_ms: 10000 });
+const fill = (step_id, selector, value) => ({ step_id, action: 'fill', locator: { kind: 'css', selector }, value: { source: 'literal', value }, timeout_ms: 10000 });
+const wait = (step_id, selector) => ({ step_id, action: 'wait_for', locator: { kind: 'css', selector }, state: 'visible', timeout_ms: 10000 });
+const common = { browser: { mode: 'launch', executable_path: executable }, start_url: { url: 'http://127.0.0.1:4318/', query: [] }, capture: { after_each_step: ['screenshot'], at_end: ['accessibility', 'url', 'screenshot'], events: ['page-errors', 'downloads'] } };
+const scenarios = [
+  ['desktop', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: [wait('overview', '.chart svg')] }],
+  ['mobile', { ...common, environment: { viewport: { width: 390, height: 844 } }, actions: [wait('overview', '.chart svg')] }],
+  ['flows', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: [
+    wait('ready', '.chart svg'), click('keywords', 'nav button:nth-child(2)'), click('research', '.inline-form button'), wait('keyword_rows', 'tbody tr:first-child'),
+    click('track', 'tbody tr:first-child button'), wait('saved_project', '#project'),
+    click('backlinks', 'nav button:nth-child(3)'), wait('link_rows', 'tbody tr:first-child'),
+    click('audit', 'nav button:nth-child(4)'), click('audit_run', '.audit-actions .primary'), wait('audit_results', '.audit-score'),
+    click('ranks', 'nav button:nth-child(5)'), wait('saved_rank', 'tbody tr:first-child'),
+    { step_id: 'reload_ranks', action: 'goto', destination: { url: 'http://127.0.0.1:4318/#rank-tracking', query: [] }, wait_until: 'load', timeout_ms: 10000 },
+    wait('persisted_rank', 'tbody tr:first-child'), click('competitors', 'nav button:nth-child(6)'), wait('comparison', 'tbody tr:first-child .overlap'),
+    click('reports', 'nav button:nth-child(7)'), click('build_report', '.report-card button'), wait('report_preview', '.report-preview'),
+    click('download_report', '.report-preview .primary'),
+  ] }],
+];
+let failures = 0;
+for (const [name, scenario] of scenarios.filter(([name]) => !process.env.QA_SCENARIO || process.env.QA_SCENARIO === name)) {
+  const input = resolve(`artifacts/${name}-scenario.json`);
+  writeFileSync(input, JSON.stringify(scenario));
+  const npxCli = process.env.NPX_CLI_PATH || resolve(dirname(process.execPath), 'node_modules/npm/bin/npx-cli.js');
+  const result = spawnSync(process.execPath, [npxCli, '-y', 'rea-agents@6.4.0', 'capture-browser-scenario', input, '--format', 'json'], { encoding: 'utf8', maxBuffer: 40 * 1024 * 1024, timeout: 120000 });
+  writeFileSync(`artifacts/${name}-raw.txt`, result.stdout || '');
+  writeFileSync(`artifacts/${name}-stderr.txt`, result.stderr || '');
+  const output = (result.stdout || '').trim(); const start = output.indexOf('{');
+  if (start < 0) { failures++; console.log(JSON.stringify({ name, error: 'No JSON result', status: result.status })); continue; }
+  let evidence;
+  try { evidence = JSON.parse(output.slice(start)); } catch { failures++; console.log(JSON.stringify({ name, error: 'Unparseable result', status: result.status })); continue; }
+  writeFileSync(`artifacts/${name}-evidence.json`, JSON.stringify(evidence, null, 2));
+  // Error envelopes may retain useful partial observations; never call them complete Evidence.
+  const partial = evidence.details?.partial_observation;
+  const capture = partial?.capture || evidence.normalized_result || evidence.result || evidence;
+  const steps = capture.steps || capture.capture?.steps || [];
+  let screenshots = 0;
+  function extract(value, path = '') {
+    if (!value || typeof value !== 'object') return;
+    if (value.media_type === 'image/png' && value.data_base64) {
+      writeFileSync(`artifacts/${name}-${screenshots++}.png`, Buffer.from(value.data_base64, 'base64'));
+      return;
+    }
+    for (const [key, child] of Object.entries(value)) extract(child, `${path}.${key}`);
+  }
+  extract(evidence);
+  const passed = result.status === 0 && !evidence.code && steps.length > 0 && steps.every(s => s.status === 'completed') && !(capture.events?.items || []).some(e => /page.?error/i.test(e.type || e.kind || ''));
+  if (!passed) failures++;
+  console.log(JSON.stringify({ name, passed, status: result.status, evidence_id: evidence.id || evidence.evidence_id, error: evidence.code || null, screenshots, steps: steps.map(s => ({ id: s.step_id, status: s.status, error: s.error })), events: capture.events, limitations: capture.limitations }));
+}
+process.exitCode = failures ? 1 : 0;
