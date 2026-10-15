@@ -9,9 +9,19 @@ const click = (step_id, selector) => ({ step_id, action: 'click', locator: { kin
 const fill = (step_id, selector, value) => ({ step_id, action: 'fill', locator: { kind: 'css', selector }, value: { source: 'literal', value }, timeout_ms: 10000 });
 const wait = (step_id, selector) => ({ step_id, action: 'wait_for', locator: { kind: 'css', selector }, state: 'visible', timeout_ms: 10000 });
 const common = { browser: { mode: 'launch', executable_path: executable }, start_url: { url: 'http://127.0.0.1:4318/', query: [] }, capture: { after_each_step: ['screenshot'], at_end: ['accessibility', 'url', 'screenshot'], events: ['page-errors', 'downloads'] } };
+const socialActions = [
+  wait('ready', '.chart svg'), click('social_module', 'nav button:nth-child(8)'), wait('social_form', '#social-html'),
+  click('audit_social', '.social-grid form button'), wait('audit_findings', '.social-check-grid'),
+  click('generate_meta', '.social-module > .panel form button.secondary'), wait('metadata_output', '#social-snippet'),
+  click('content_tab', '.social-tabs button:nth-child(2)'), click('review_caption', '.social-grid form button'), wait('caption_findings', '.social-check-list'),
+  click('campaign_tab', '.social-tabs button:nth-child(3)'), click('build_link', '.social-grid form button'), wait('tracked_url', '#campaign-result'),
+  wait('claude_setup', '.claude-body .setup-note'), click('connector_guide', '.connector-guide summary'),
+];
 const scenarios = [
   ['desktop', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: [wait('overview', '.chart svg')] }],
   ['mobile', { ...common, environment: { viewport: { width: 390, height: 844 } }, actions: [wait('overview', '.chart svg')] }],
+  ['social', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: socialActions }],
+  ['social-mobile', { ...common, environment: { viewport: { width: 390, height: 844 } }, actions: socialActions }],
   ['flows', { ...common, environment: { viewport: { width: 1440, height: 1080 } }, actions: [
     wait('ready', '.chart svg'), click('keywords', 'nav button:nth-child(2)'), click('research', '.inline-form button'), wait('keyword_rows', 'tbody tr:first-child'),
     click('track', 'tbody tr:first-child button'), wait('saved_project', '#project'),

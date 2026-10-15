@@ -16,7 +16,15 @@ The server parses the supplied string with Cheerio, never executing scripts or f
 
 Bind only to loopback. No authentication or tenant authorization is implemented. Reject cross-origin browser writes and omit CORS headers. JSON requests are bounded to 1 MB; domain/keyword inputs are validated; no URL-fetch endpoint exists. Provider keys are not required. HTML and exports are not saved by the service. CSV fields are quoted and formula-like prefixes are escaped. React escapes displayed strings; submitted HTML never enters `dangerouslySetInnerHTML`.
 
-These controls support a single-user local scaffold. They do not replace identity, CSRF tokens, authorization, network isolation, operational hardening or security review for a hosted service. Google Fonts makes a presentation-only external request; remove the CSS import for fully offline UI use.
+These controls support a single-user local scaffold. They do not replace identity, CSRF tokens, authorization, network isolation, operational hardening or security review for a hosted service. Google Fonts makes a presentation-only external request; remove the CSS import for fully offline UI use. The optional Claude advisor sends a bounded prompt/context to Anthropic only on an explicit user action; its API key remains server-side.
+
+## Social and Claude modules
+
+`shared/social.ts` contains input validation and pure caption/UTM/escaped-markup generation. `server/social.ts` parses submitted Open Graph/X-style metadata without fetching pages or images. `src/SocialSeo.tsx` keeps draft/audit state within the module and exports results on demand; no new database schema is needed. Social scores are explicit editorial/markup checklists.
+
+`server/claude.ts` is the only AI provider adapter. The server injects it into the API at startup using `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL`. Tests inject an isolated transport to verify the actual SDK request contract without making paid network calls. Missing keys and failed requests return explicit errors, never mock recommendations. The UI renders responses as text and discards responses if the workspace context changed during a request.
+
+`mcp/index.ts` serves stdio using the official MCP SDK, sharing the local analysis functions through ten read-only tools. It reserves stdout for protocol traffic and opens SQLite read-only only for workspace reads. It neither starts the HTTP API nor calls Anthropic. Claude clients provide their own model access. See [Claude setup](CLAUDE.md) and [Social SEO behavior](SOCIAL_SEO.md).
 
 ## Future provider contract
 

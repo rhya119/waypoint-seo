@@ -3,6 +3,9 @@ import { DatabaseSync } from 'node:sqlite';
 import { z } from 'zod';
 import { demoProvider, type SeoProvider } from './provider.js';
 import { auditHtml } from './audit.js';
+import { auditSocial } from './social.js';
+import { socialAuditInput, campaignInput, buildCampaignLink, captionInput, reviewCaption, metadataInput, buildSocialMetadata } from '../shared/social.js';
+import { createClaudeService, claudeInput, ClaudeError, type ClaudeService } from './claude.js';
 export function normalizeDomain(value: string): string {
   const url = new URL(value.includes('://') ? value : `https://${value}`);
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port || !url.hostname.includes('.') || !/^[a-z0-9.-]+$/i.test(url.hostname)) throw new Error('Enter a valid domain, such as example.com.');
@@ -11,7 +14,7 @@ export function normalizeDomain(value: string): string {
 const domainSchema = z.string().trim().max(253).transform((value, ctx) => {
   try { return normalizeDomain(value); } catch { ctx.addIssue({ code: 'custom', message: 'Enter a valid HTTP(S) domain.' }); return z.NEVER; }
 });
-export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider) {
+export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService()) {
   db.exec(`PRAGMA foreign_keys=ON;
     CREATE TABLE IF NOT EXISTS projects(id INTEGER PRIMARY KEY, domain TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS ranks(id INTEGER PRIMARY KEY, project_id INTEGER NOT NULL REFERENCES projects(id), keyword TEXT NOT NULL, country TEXT NOT NULL, device TEXT NOT NULL, position INTEGER NOT NULL, previous INTEGER NOT NULL, checked_at TEXT NOT NULL, provenance TEXT NOT NULL DEFAULT 'demo', UNIQUE(project_id,keyword,country,device));`);
@@ -57,6 +60,12 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
     res.status(204).end();
   });
   app.post('/api/audit', (req, res) => res.json(auditHtml(z.object({ html: z.string().min(10).max(900000) }).parse(req.body).html)));
+  app.post('/api/social/audit', (req, res) => res.json(auditSocial(socialAuditInput.parse(req.body))));
+  app.post('/api/social/metadata', (req, res) => res.json({ html: buildSocialMetadata(metadataInput.parse(req.body)) }));
+  app.post('/api/social/caption', (req, res) => res.json(reviewCaption(captionInput.parse(req.body))));
+  app.post('/api/social/campaign', (req, res) => res.json(buildCampaignLink(campaignInput.parse(req.body))));
+  app.get('/api/claude/status', (_req, res) => res.json(claude.status()));
+  app.post('/api/claude/recommend', async (req, res) => res.json(await claude.recommend(claudeInput.parse(req.body))));
   app.get('/api/reports', (req, res) => {
     const domain = domainSchema.parse(req.query.domain);
     const project = db.prepare('SELECT id FROM projects WHERE domain=?').get(domain) as { id: number } | undefined;
@@ -64,6 +73,7 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   });
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'API route not found.' }); });
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (error instanceof ClaudeError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof z.ZodError) { res.status(400).json({ error: error.issues[0]?.message || 'Invalid request.' }); return; }
     const status = (error as { status?: number }).status;
     res.status(status === 413 ? 413 : status === 400 ? 400 : 500).json({ error: status === 413 ? 'HTML exceeds the 1 MB request limit.' : status === 400 ? 'Invalid JSON body.' : 'The request could not be completed.' });

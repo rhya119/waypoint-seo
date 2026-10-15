@@ -2,6 +2,18 @@
 
 Completed 2026-10-16 on Windows with Node 24.19.0 and npm 12.0.2.
 
+## v0.2 — Social SEO and Claude
+
+`npm run check` passes **14 tests**, strict TypeScript checking and a production build. Added cases cover metadata attribute escaping and parser round-trips, first-image alternative associations, unsafe URL rejection, duplicate normalized Unicode hashtags, query/fragment-preserving UTM generation, social API validation, missing-key Claude behavior, sanitized upstream failures, token usage, output limits and the real Anthropic SDK wire request using a mocked fetch. No live Anthropic request was made: no API key is configured, and the status endpoint correctly returned `configured: false`.
+
+A real MCP client launched the actual stdio entry point, discovered ten read-only tools, ran a social audit, read an empty isolated workspace, and rejected an unsafe campaign URL. The installed Claude Code client then registered `waypoint` in private project-scoped local configuration and `claude mcp get waypoint` returned **Connected**. A Claude conversation calling the connector was not run. Claude Desktop configuration was absent and was not created.
+
+REA desktop Social SEO Evidence: `ev_be82e7ed55146e4101c50033d14e8800eee74f0f85a46f29c5a9a76d7d6f6e58`. All 16 steps completed; zero page-error events; owned-browser cleanup confirmed. REA mobile Evidence: `ev_d676544c856693b0dd15fb2c88ce9a3c9388404a3269d76b77868a80a1a3d303`, also 16 successful steps, zero page errors and confirmed cleanup. Both ran against the production frontend served by the local API. Screenshots of the desktop share audit/content review and mobile campaign output were visually inspected. The scenarios exercised share checks, metadata generation, caption review, UTM generation, missing-key Claude setup and connector instructions. Download/copy controls were not newly verified end-to-end.
+
+An initial social QA selector matched both metadata and Claude buttons; it was corrected to target the metadata button. A subsequent desktop capture completed all UI actions but reported a cleanup timeout; process inventory showed no matching browser remained. The final desktop run above completed with confirmed cleanup. Raw captures remain ignored local artifacts.
+
+After the UI captures, minor footer/help text, first-image association, configuration-output scope and stale-response handling changes passed the automated checks. No live platform previews, social analytics, publishing, or Claude model response quality were verified. Open Graph and UTM behavior follows linked primary documentation; the old official X card pages were unavailable/redirected, so X rendering is explicitly illustrative.
+
 ## Automated checks
 
 `npm run check` passes: five tests, strict TypeScript checking, Vite production build. Test coverage includes domain normalization/rejection, repeatable demo generation, passing/failing static HTML checks, project deduplication, tracking creation/deletion, invalid project rejection, report provenance, invalid JSON, cross-origin and non-loopback Host rejection, and CSV escaping/formula protection. API tests use an isolated in-memory SQLite database. npm install's dependency audit reported zero vulnerabilities at installation time; this is a time-bound package audit, not a security certification.
