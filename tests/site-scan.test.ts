@@ -50,7 +50,7 @@ test('public scan pins each request to vetted DNS, extracts actual HTML and craw
   assert.equal(result.robots.allowed, true);
   assert.equal(result.audit.checks.find((check) => check.name === 'Indexability declaration')?.passed, false);
   assert.equal(result.externalLinks.length, 1);
-  assert.deepEqual(calls.map((input) => input.url.pathname), ['/robots.txt', '/', '/about', '/gone', '/third', '/llms.txt']);
+  assert.deepEqual(calls.map((input) => input.url.pathname), ['/robots.txt', '/', '/sitemap.xml', '/about', '/gone', '/third', '/llms.txt']);
   assert.equal(result.pageChecks?.length, 4);
   assert.equal(result.llms?.found, false);
   assert.ok(result.pageIssues?.some((issue) => issue.type === 'Broken page' && issue.url.endsWith('/gone')));
@@ -103,7 +103,7 @@ test('homepage redirects are validated, use target robots and public DNS, and st
   } });
   const result = await scanner.scan(site);
   assert.equal(result.finalUrl, `https://www.${site}/`);
-  assert.deepEqual(calls, [`https://${site}/robots.txt`, `https://${site}/`, `https://www.${site}/robots.txt`, `https://www.${site}/`, `https://www.${site}/llms.txt`]);
+  assert.deepEqual(calls, [`https://${site}/robots.txt`, `https://${site}/`, `https://www.${site}/robots.txt`, `https://www.${site}/`, `https://www.${site}/sitemap.xml`, `https://www.${site}/llms.txt`]);
   for (const location of ['https://127.0.0.1/', 'http://public-website.com/', 'https://machine.tail.ts.net/', 'https://user:pass@public-website.com/']) {
     const called: string[] = [];
     const unsafe = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
@@ -134,7 +134,7 @@ test('robots disallow, unreachable policy, non-plain policy and linked-page disa
     return input.url.pathname === '/robots.txt' ? response('User-agent: WaypointSEO\nDisallow: /private', 200, 'text/plain') : response(html.replace('</body>', '<a href="/private">Private page</a></body>'));
   } });
   const result = await scanner.scan(site);
-  assert.deepEqual(calls, ['/robots.txt', '/', '/llms.txt']);
+  assert.deepEqual(calls, ['/robots.txt', '/', '/sitemap.xml', '/llms.txt']);
   assert.match(result.pageChecks?.[1].error || '', /disallows/);
 });
 
@@ -220,4 +220,33 @@ test('the three-redirect limit applies per page, not across the whole crawl', as
   } });
   const result = await scanner.scan(site);
   assert.deepEqual(result.pageChecks?.map((page) => page.error ?? new URL(page.url).pathname), ['/', '/a/', '/b/', '/c/', '/d/']);
+});
+
+test('sitemaps (index and gzip) add unlinked pages to the crawl and flag orphans and pages missing from the sitemap', async () => {
+  const { gzipSync } = await import('node:zlib');
+  const index = '<?xml version="1.0"?><sitemapindex><sitemap><loc>https://public-website.com/pages.xml.gz</loc></sitemap><sitemap><loc>https://elsewhere.com/evil.xml</loc></sitemap></sitemapindex>';
+  const pages = '<urlset><url><loc>https://public-website.com/</loc></url><url><loc>https://public-website.com/about</loc></url><url><loc><![CDATA[https://public-website.com/hidden-offer]]></loc></url><url><loc>https://public-website.com/old-page</loc></url><url><loc>https://elsewhere.com/x</loc></url></urlset>';
+  const calls: string[] = [];
+  const scanner = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
+    calls.push(input.url.href);
+    const path = input.url.pathname;
+    if (path === '/robots.txt') return response('User-agent: *\nAllow: /\nSitemap: https://public-website.com/sitemap_index.xml', 200, 'text/plain');
+    if (path === '/sitemap_index.xml') return response(index, 200, 'application/xml');
+    if (path === '/pages.xml.gz') return { status: 200, headers: { 'content-type': 'application/x-gzip' }, body: gzipSync(pages) };
+    if (path === '/old-page') return response('Gone', 404);
+    if (path === '/') return response(html.replace('</body>', '<a href="/about">About</a><a href="/blog">Blog</a></body>'));
+    return response(html.replace('A practical garden website', `Garden ${path}`));
+  } });
+  const result = await scanner.scan(site);
+  assert.ok(!calls.some((url) => url.includes('elsewhere.com')), 'other hosts in a sitemap are never fetched');
+  assert.equal(result.sitemap?.urls, 4);
+  assert.deepEqual(result.sitemap?.sources, ['https://public-website.com/sitemap_index.xml', 'https://public-website.com/pages.xml.gz']);
+  const byPath = Object.fromEntries((result.pageChecks || []).map((page) => [new URL(page.url).pathname, page]));
+  assert.equal(byPath['/hidden-offer']?.source, 'sitemap');
+  assert.equal(byPath['/blog']?.inSitemap, false);
+  const types = (path: string) => (result.pageIssues || []).filter((issue) => new URL(issue.url).pathname === path).map((issue) => issue.type);
+  assert.ok(types('/hidden-offer').includes('Orphan page'));
+  assert.ok(types('/blog').includes('Missing from sitemap'));
+  assert.ok(!types('/about').includes('Missing from sitemap'));
+  assert.match((result.pageIssues || []).find((issue) => issue.url.endsWith('/old-page'))?.detail || '', /listed in your sitemap/);
 });

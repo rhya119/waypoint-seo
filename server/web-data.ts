@@ -244,7 +244,7 @@ export function saveSiteScan(db: DatabaseSync, result: SiteScan, expectedDomain?
   savePayload(db, 'web_site_scans', domain, { ...result, domain });
   if (hasTable(db, 'web_scan_history')) {
     const summary: ScanSummary = {
-      scannedAt: result.scannedAt, pages: result.pageChecks?.length || 1, checklist: result.audit.score, aiScore: result.ai?.score ?? null,
+      scannedAt: result.scannedAt, pages: result.pageChecks?.length || 1, checklist: result.audit.score, aiScore: result.ai?.score ?? null, auto: Boolean(result.auto),
       issues: [...new Set([...(result.pageIssues || []).map((issue) => `${issue.type}|${issue.url}`), ...(result.ai?.checks || []).filter((check) => !check.passed).map((check) => `AI: ${check.name}|${result.finalUrl}`)])].slice(0, 1000),
     };
     db.prepare('INSERT INTO web_scan_history(domain,scanned_at,payload) VALUES(?,?,?)').run(domain, result.scannedAt, JSON.stringify(summary));

@@ -123,7 +123,7 @@ export type WebReport = {
   scanHistory: ScanSummary[];
   disclosure: string;
 };
-export type ScanSummary = { scannedAt: string; pages: number; checklist: number; aiScore: number | null; issues: string[] };
+export type ScanSummary = { scannedAt: string; pages: number; checklist: number; aiScore: number | null; issues: string[]; auto?: boolean };
 export const trackInput = z.object({
   domain: webDomain,
   keyword: z.string().trim().min(1).max(200),

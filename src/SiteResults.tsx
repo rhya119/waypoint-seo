@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowUpRight, Check, ChevronRight } from 'lucide-react';
 import type { SiteScan } from '../shared/site-scan';
 import type { WebReport } from '../shared/web-data';
@@ -18,6 +18,9 @@ export default function SiteResults({ site, page, comparisons, refresh, history 
   const [linkType, setLinkType] = useState('all');
   const [showAllLinks, setShowAllLinks] = useState(false);
   const [targetKeyword, setTargetKeyword] = useState('');
+  const [schedule, setSchedule] = useState<{ enabled: boolean; intervalDays: number; nextRun: string | null; lastError?: string | null }>();
+  useEffect(() => { if (site && page === 0) api<typeof schedule>(`/web/auto-scan?${new URLSearchParams({ domain: site.domain })}`).then(setSchedule).catch(() => setSchedule(undefined)); }, [site?.domain, page]);
+  const changeSchedule = (value: string) => { if (!site) return; void api<typeof schedule>('/web/auto-scan', { domain: site.domain, enabled: value !== '0', intervalDays: Number(value) || 7 }, 'PUT').then(setSchedule).catch(() => undefined); };
   const failures = site?.audit.checks.filter(check => !check.passed) || [];
   const checks = site?.pageChecks || [];
   const priorities = [
@@ -38,7 +41,12 @@ export default function SiteResults({ site, page, comparisons, refresh, history 
     {site && [0, 3, 6].includes(page) && <section className="panel web-scan-summary" data-site-results="true">
       <div className="panel-head">
         <div><h2>{page === 3 ? 'Website audit' : 'Website snapshot'}</h2><p><a href={site.finalUrl} target="_blank" rel="noreferrer">{site.domain} <ArrowUpRight size={13} /></a> · scanned {new Date(site.scannedAt).toLocaleDateString()}</p></div>
-        <span className="tag">Public pages · HTTP {site.status}</span>
+        {page === 0 && schedule ? <label className="auto-scan">Rescan automatically
+          <select value={schedule.enabled ? String(schedule.intervalDays) : '0'} onChange={(event) => changeSchedule(event.target.value)}>
+            <option value="0">Off</option><option value="1">Daily</option><option value="7">Weekly</option><option value="30">Monthly</option>
+          </select>
+          {schedule.enabled && schedule.nextRun && <small>Next: {new Date(schedule.nextRun).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}{schedule.lastError ? ' · last run failed' : ''}</small>}
+        </label> : <span className="tag">Public pages · HTTP {site.status}</span>}
       </div>
       <div className="web-stats web-scan-stats">
         {([
@@ -49,7 +57,7 @@ export default function SiteResults({ site, page, comparisons, refresh, history 
         ] as const).map(([label, value, tab]) => <a key={label} href="#site-audit" onClick={() => openHealthTab(tab)}><small>{label}</small><strong>{value}</strong></a>)}
       </div>
       {current && previous && (fixed > 0 || added > 0) && <details className="scan-diff">
-        <summary>Since the scan on {new Date(previous.scannedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}: {fixed > 0 && <strong className="diff-fixed">✓ {fixed} fixed</strong>}{fixed > 0 && added > 0 && ' · '}{added > 0 && <strong className="diff-new">{added} new</strong>}</summary>
+        <summary>{current.auto ? 'Automatic rescan · ' : ''}Since the scan on {new Date(previous.scannedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}: {fixed > 0 && <strong className="diff-fixed">✓ {fixed} fixed</strong>}{fixed > 0 && added > 0 && ' · '}{added > 0 && <strong className="diff-new">{added} new</strong>}</summary>
         <ul>{[...previous.issues.filter(issue => !current.issues.includes(issue)).map(issue => ['fixed', issue] as const), ...current.issues.filter(issue => !previous.issues.includes(issue)).map(issue => ['new', issue] as const)].slice(0, 40).map(([kind, issue]) => { const [type, url] = issue.split('|'); return <li key={kind + issue} className={kind === 'fixed' ? 'diff-fixed' : 'diff-new'}>{kind === 'fixed' ? '✓ Fixed' : '• New'}: {type} <small>{(() => { try { return new URL(url).pathname; } catch { return url; } })()}</small></li>; })}</ul>
       </details>}
       {page === 6 && <div className="web-priorities">

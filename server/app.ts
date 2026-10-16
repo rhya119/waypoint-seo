@@ -19,6 +19,7 @@ import { createClaudeCodeStatus } from './claude-code.js';
 import { createSiteScanner, SiteScanError } from './site-scan.js';
 import { createGoogleSeoProvider, GoogleSeoError, type GoogleSeoProvider } from './google-data.js';
 import { createGoogleOAuth, loopbackRedirect, ga4Choice, setGa4Choice, type GoogleOAuth } from './google-oauth.js';
+import { createAutoScan, type AutoScan } from './auto-scan.js';
 import { googleSeoInput } from '../shared/google-data.js';
 import { createTrafficEstimateProvider, TrafficEstimateError, type TrafficEstimateProvider } from './traffic-estimates.js';
 import { trafficEstimateInput } from '../shared/traffic-estimates.js';
@@ -32,7 +33,7 @@ export function normalizeDomain(value: string): string {
 const domainSchema = z.string().trim().max(253).transform((value, ctx) => {
   try { return normalizeDomain(value); } catch { ctx.addIssue({ code: 'custom', message: 'Enter a valid HTTP(S) domain.' }); return z.NEVER; }
 });
-export type AppOptions = { privateOrigin?: string; scanner?: ReturnType<typeof createSiteScanner>; google?: Pick<GoogleSeoProvider, 'status' | 'pull'> & Partial<Pick<GoogleSeoProvider, 'properties'>>; googleOAuth?: GoogleOAuth; trafficEstimates?: TrafficEstimateProvider; pageSpeed?: PageSpeedProvider; keywordIdeas?: KeywordIdeasProvider };
+export type AppOptions = { privateOrigin?: string; scanner?: ReturnType<typeof createSiteScanner>; google?: Pick<GoogleSeoProvider, 'status' | 'pull'> & Partial<Pick<GoogleSeoProvider, 'properties'>>; googleOAuth?: GoogleOAuth; autoScan?: AutoScan; trafficEstimates?: TrafficEstimateProvider; pageSpeed?: PageSpeedProvider; keywordIdeas?: KeywordIdeasProvider };
 export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService(), youtube: YouTubeProvider = createYouTubeProvider(), connectors: SocialConnectors = createSocialConnectors(), options: AppOptions = {}) {
   let privateOrigin = '';
   if (options.privateOrigin) { const origin = new URL(options.privateOrigin); if (origin.protocol !== 'https:' || !origin.hostname.endsWith('.ts.net') || origin.username || origin.password || origin.port || origin.pathname !== '/' || origin.search || origin.hash) throw new Error('Private origin must be an HTTPS Tailscale .ts.net origin.'); privateOrigin = origin.origin; }
@@ -51,6 +52,7 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   const trafficEstimates = options.trafficEstimates || createTrafficEstimateProvider();
   const pageSpeed = options.pageSpeed || createPageSpeedProvider();
   const keywordIdeas = options.keywordIdeas || createKeywordIdeas();
+  const autoScan = options.autoScan || createAutoScan(db, { scan: (domain) => scanner.scan(domain) });
   app.use((req, res, next) => {
     if (!['127.0.0.1', 'localhost', '[::1]', '::1', ...(privateOrigin ? [new URL(privateOrigin).hostname] : [])].includes(req.hostname)) { res.status(403).json({ error: 'Only loopback or the configured private Tailscale host is accepted.' }); return; }
     next();
@@ -106,6 +108,8 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
     const site = webReport(db, input.domain).site;
     res.json(savePageSpeed(db, await pageSpeed.run(input, site?.finalUrl || `https://${input.domain}/`)));
   });
+  app.get('/api/web/auto-scan', (req, res) => res.json(autoScan.status(webDomain.parse(req.query.domain))));
+  app.put('/api/web/auto-scan', (req, res) => res.json(autoScan.set(req.body)));
   app.post('/api/web/keyword-ideas', async (req, res) => res.json(await keywordIdeas.ideas(keywordIdeasInput.parse(req.body))));
   app.post('/api/web/import/preview', (req, res) => { const result = previewWebImport(req.body); res.json({ valid: result.valid, count: result.count, sample: result.sample, errors: result.errors }); });
   app.post('/api/web/import', (req, res) => res.json(importWebData(db, req.body)));

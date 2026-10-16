@@ -37,7 +37,13 @@ export type SiteScan = {
     missingAlt?: number;
     internalLinks?: number;
     inlinks?: number;
+    /** How the crawler found the page. */
+    source?: 'home' | 'link' | 'sitemap';
+    inSitemap?: boolean;
   }[];
+  sitemap?: { urls: number; sources: string[]; error: string | null };
+  /** True when the scan ran on the automatic schedule. */
+  auto?: boolean;
   pageIssues?: { type: string; severity: 'error' | 'warning'; url: string; detail: string }[];
   ai?: AiReadiness;
   /** Static performance signals from the homepage HTML plus crawl response times. Not Core Web Vitals. */

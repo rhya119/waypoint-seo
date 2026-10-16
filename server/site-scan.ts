@@ -75,7 +75,7 @@ function requestPinned(input: SiteRequest): Promise<SiteResponse> {
       checkServerIdentity: (_hostname, certificate) => checkServerIdentity(input.url.hostname, certificate),
       path: input.url.pathname + input.url.search, method: 'GET', agent: false,
       signal: input.signal, maxHeaderSize: 16_384,
-      headers: { Host: input.url.host, 'User-Agent': USER_AGENT, Accept: 'text/html,text/plain;q=0.9', 'Accept-Encoding': 'gzip, deflate, br', Connection: 'close' },
+      headers: { Host: input.url.host, 'User-Agent': USER_AGENT, Accept: 'text/html,text/plain;q=0.9,application/xml;q=0.8,text/xml;q=0.8', 'Accept-Encoding': 'gzip, deflate, br', Connection: 'close' },
     }, (res) => {
       const chunks: Buffer[] = [];
       let bytes = 0;
@@ -245,7 +245,7 @@ export function findPageIssues(pages: IssueInput): NonNullable<SiteScan['pageIss
   for (const page of pages) {
     if (page.error) {
       const broken = page.status === 404 || page.status === 410;
-      add(broken ? 'Broken page' : 'Unreachable page', broken ? 'error' : 'warning', page.url, page.error);
+      add(broken ? 'Broken page' : 'Unreachable page', broken ? 'error' : 'warning', page.url, page.source === 'sitemap' ? `${page.error} — listed in your sitemap; remove it or fix the page.` : page.error);
       continue;
     }
     if (!page.title) add('Missing title', 'error', page.url, 'This page has no <title>.');
@@ -264,6 +264,8 @@ export function findPageIssues(pages: IssueInput): NonNullable<SiteScan['pageIss
     }
     if (page.missingAlt) add('Images without alt', 'warning', page.url, `${page.missingAlt} images have no alt attribute.`);
     if (page.depth && page.depth >= 4) add('Deep page', 'warning', page.url, `${page.depth} clicks from the homepage.`);
+    if (page.inSitemap === false && !page.noindex && page.status !== null && page.status < 300) add('Missing from sitemap', 'warning', page.url, 'Linked on your site but not listed in the sitemap, so Google may find it more slowly.');
+    if (page.source === 'sitemap' && !page.inlinks) add('Orphan page', 'warning', page.url, 'Listed in the sitemap but no crawled page links to it. Link to it from a related page or menu.');
   }
   return issues;
 }
@@ -392,13 +394,13 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
         if (current.href !== initial.href) warnings.push(`The homepage redirected to ${current.href}.`);
         warnings.push(...parsed.parsingWarnings);
         type PageCheck = NonNullable<SiteScan['pageChecks']>[number];
-        const pageRecord = (url: URL, status: number | null, page: ReturnType<typeof inspectHtml>, ms: number, depth: number): PageCheck => ({
+        const pageRecord = (url: URL, status: number | null, page: ReturnType<typeof inspectHtml>, ms: number, depth: number | undefined, source: PageCheck['source']): PageCheck => ({
           url: url.href, status, title: page.title, description: page.description,
           h1Count: page.headings.filter((heading) => heading.level === 1).length, responseMs: ms, score: page.audit.score,
           depth, wordCount: page.wordCount, canonical: page.canonical, noindex: page.noindex, missingAlt: page.images.missingAlt,
-          internalLinks: page.internalLinks.length,
+          internalLinks: page.internalLinks.length, source,
         });
-        const pageChecks: PageCheck[] = [pageRecord(current, response.status, parsed, Date.now() - started, 0)];
+        const pageChecks: PageCheck[] = [pageRecord(current, response.status, parsed, Date.now() - started, 0, 'home')];
         const linkedFrom = new Map<string, number>();
         const countLinks = (links: { url: string }[]) => { for (const link of new Set(links.map((entry) => entry.url))) linkedFrom.set(link, (linkedFrom.get(link) || 0) + 1); };
         countLinks(parsed.internalLinks);
@@ -421,8 +423,57 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
           }
         };
         enqueue(parsed.internalLinks, 1);
-        while (queue.length && pageChecks.length < maxPages && !total.signal.aborted && bytes < maxBytes) {
-          const { url: candidate, depth } = queue.shift()!;
+        // Sitemap discovery: pages that nothing links to are often the forgotten or
+        // broken ones. Same host only, bounded files, URLs and bytes.
+        const sitemap: NonNullable<SiteScan['sitemap']> = { urls: 0, sources: [], error: null };
+        const sitemapUrls = new Set<string>();
+        const declared = (policies.get(current.origin)?.info.sitemaps || []).filter((value) => { try { return new URL(value).hostname === current.hostname; } catch { return false; } });
+        const sitemapQueue = declared.length ? declared.slice(0, 5) : [new URL('/sitemap.xml', current).href];
+        for (let fetched = 0; sitemapQueue.length && fetched < 6 && sitemapUrls.size < 5000 && bytes < maxBytes / 2 && !total.signal.aborted; fetched++) {
+          let sitemapUrl: URL;
+          try { sitemapUrl = allowedUrl(sitemapQueue.shift()!); } catch { continue; }
+          if (sitemapUrl.hostname !== current.hostname) continue;
+          try {
+            const policy = await policyFor(sitemapUrl);
+            if (!(policy.parser?.isAllowed(sitemapUrl.href, ROBOT_NAME) ?? true)) continue;
+            let sitemapResponse = await get(sitemapUrl);
+            const moved = redirect(sitemapResponse, sitemapUrl);
+            redirects = 0;
+            if (moved && moved.hostname === current.hostname) { sitemapUrl = moved; sitemapResponse = await get(moved); }
+            if (sitemapResponse.status !== 200) { if (declared.length) sitemap.error = `${sitemapUrl.pathname} returned HTTP ${sitemapResponse.status}.`; continue; }
+            let body = sitemapResponse.body;
+            if (/\.gz$/i.test(sitemapUrl.pathname) || /gzip/i.test(header(sitemapResponse, 'content-type'))) {
+              try { body = gunzipSync(body, { maxOutputLength: DECODED_LIMIT }); } catch { sitemap.error = `${sitemapUrl.pathname} is not a readable gzip sitemap.`; continue; }
+            }
+            const text = body.toString('utf8');
+            if (!/<(?:urlset|sitemapindex)\b/i.test(text)) { if (declared.length) sitemap.error = `${sitemapUrl.pathname} is not an XML sitemap.`; continue; }
+            const locs = [...text.matchAll(/<loc>\s*(?:<!\[CDATA\[)?\s*([^<\s\]]+)/gi)].slice(0, 50_000).map((match) => match[1].replace(/&amp;/g, '&').replace(/&apos;/g, "'").replace(/&quot;/g, '"'));
+            sitemap.sources.push(sitemapUrl.href);
+            if (/<sitemapindex\b/i.test(text)) { sitemapQueue.push(...locs.slice(0, 10)); continue; }
+            for (const loc of locs) {
+              if (sitemapUrls.size >= 5000) break;
+              const href = visibleUrl(loc, sitemapUrl);
+              if (href && new URL(href).hostname === current.hostname) sitemapUrls.add(href);
+            }
+          } catch (error) {
+            redirects = 0;
+            if (error instanceof SiteScanError && (error.status === 413 || error.status === 504)) break;
+            if (declared.length) sitemap.error = error instanceof SiteScanError ? error.message : 'The sitemap could not be read.';
+          }
+        }
+        sitemap.urls = sitemapUrls.size;
+        const inSitemap = (url: string) => sitemapUrls.has(url) || sitemapUrls.has(url.endsWith('/') ? url.slice(0, -1) : `${url}/`);
+        const sitemapOnly: URL[] = [];
+        for (const href of sitemapUrls) { const url = new URL(href); if (eligible(url)) sitemapOnly.push(url); }
+        const nextPage = (): { url: URL; depth?: number; source: 'link' | 'sitemap' } | undefined => {
+          const fromSitemap = () => { while (sitemapOnly.length) { const url = sitemapOnly.shift()!; if (!visited.has(url.href)) { visited.add(url.href); return { url, source: 'sitemap' as const }; } } return undefined; };
+          if (!queue.length || pageChecks.length % 5 === 4) { const page = fromSitemap(); if (page) return page; }
+          const link = queue.shift();
+          return link ? { ...link, source: 'link' } : fromSitemap();
+        };
+        let next: ReturnType<typeof nextPage>;
+        while (pageChecks.length < maxPages && !total.signal.aborted && bytes < maxBytes && (next = nextPage())) {
+          const { url: candidate, depth, source } = next;
           const pageStarted = Date.now();
           let pageUrl = candidate;
           let pageStatus: number | null = null;
@@ -450,9 +501,9 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
             const type = header(pageResponse, 'content-type').split(';')[0].trim().toLowerCase();
             if (type !== 'text/html' && type !== 'application/xhtml+xml') throw new SiteScanError(415, 'The linked URL did not return HTML.');
             const page = inspectHtml(pageResponse.body.toString('utf8'), pageUrl, pageResponse);
-            pageChecks.push(pageRecord(pageUrl, pageStatus, page, Date.now() - pageStarted, depth));
+            pageChecks.push(pageRecord(pageUrl, pageStatus, page, Date.now() - pageStarted, depth, source));
             countLinks(page.internalLinks);
-            enqueue(page.internalLinks, depth + 1);
+            enqueue(page.internalLinks, (depth ?? 1) + 1);
           } catch (error) {
             // Running out of the download budget or time is a crawl limit, not a page problem.
             if (error instanceof SiteScanError && (error.status === 413 || error.status === 504) || total.signal.aborted) {
@@ -460,13 +511,13 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
               break;
             }
             const message = error instanceof SiteScanError ? error.message : 'The linked page could not be reached securely.';
-            pageChecks.push({ url: pageUrl.href, status: pageStatus, title: '', description: '', h1Count: 0, responseMs: Date.now() - pageStarted, score: null, error: message, depth });
+            pageChecks.push({ url: pageUrl.href, status: pageStatus, title: '', description: '', h1Count: 0, responseMs: Date.now() - pageStarted, score: null, error: message, depth, source });
             warnings.push(`${pageStatus === 404 || pageStatus === 410 ? 'Broken internal link' : 'Linked page check incomplete'}: ${pageUrl.href} (${message}).`);
             if (total.signal.aborted || bytes >= maxBytes) break;
           }
         }
-        if (queue.length && pageChecks.length >= maxPages) warnings.push(`The crawl stopped at its ${maxPages}-page limit; ${queue.length}+ more linked pages were not checked.`);
-        for (const page of pageChecks) page.inlinks = linkedFrom.get(page.url) || 0;
+        if ((queue.length || sitemapOnly.some((url) => !visited.has(url.href))) && pageChecks.length >= maxPages) warnings.push(`The crawl stopped at its ${maxPages}-page limit; more linked or sitemap pages were not checked.`);
+        for (const page of pageChecks) { page.inlinks = linkedFrom.get(page.url) || 0; if (sitemap.urls) page.inSitemap = inSitemap(page.url); }
         for (const field of ['title', 'description'] as const) {
           const seen = new Map<string, string>();
           for (const page of pageChecks.filter((check) => !check.error)) {
@@ -498,7 +549,7 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
           robotsFound: Boolean(homePolicy?.parser), isAllowed: (agent) => homePolicy?.parser?.isAllowed(current.href, agent) ?? true,
           signals: parsed.signals, structuredDataTypes: parsed.structuredDataTypes, wordCount: parsed.wordCount, description: parsed.description,
           openGraph: parsed.openGraph, canonical: parsed.canonical, language: parsed.language, noindex: parsed.noindex,
-          sitemaps: homePolicy?.info.sitemaps || [], llms, h1Count: pageChecks[0].h1Count,
+          sitemaps: homePolicy?.info.sitemaps.length ? homePolicy.info.sitemaps : sitemap.sources, llms, h1Count: pageChecks[0].h1Count,
         });
         const { parsingWarnings: _, signals: _signals, noindex: _noindex, speed: homeSpeed, ...fields } = parsed;
         const responseTimes = pageChecks.slice(1).filter((page) => !page.error).map((page) => page.responseMs);
@@ -506,7 +557,7 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
         return {
           domain: initial.hostname.replace(/^www\./, ''), requestedUrl: initial.href, finalUrl: current.href,
           scannedAt: new Date().toISOString(), status: response.status, responseMs: Date.now() - started, bytes,
-          ...fields, pageChecks, pageIssues, ai, llms, speed, warnings, robots: robots!,
+          ...fields, pageChecks, pageIssues, ai, llms, speed, sitemap, warnings, robots: robots!,
           disclosure: `Live public HTML inspection of the homepage and up to ${maxPages - 1} static-looking same-origin linked pages (breadth-first), respecting robots.txt. No JavaScript, assets, forms or login pages were executed. Topics are homepage word frequencies, not search demand, rankings or search volume. Links are links found on the homepage, not an inbound backlink index. Broken-link and duplicate checks cover only the listed pages; this is a bounded crawl, not a complete site crawl. AI-search readiness reads robots rules, llms.txt and homepage markup; it does not query AI engines. The checklist score describes fetched markup, not ranking. Response bytes include robots, redirects and checked pages; link previews and structured-data traversal are bounded.`,
         };
       } catch (error) {
