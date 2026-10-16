@@ -2,9 +2,22 @@
 
 An independent, local-first SEO research toolkit. Original branding, UI, source code, and architecture; inspired only by broad product categories in the SEO industry.
 
-**Status: v0.5 — live public website scans, free SEO imports, optional provider data and a private Windows service.** Inspect public website markup immediately, then add your authorized Google data, supplied backlinks and observed ranks. Optional Similarweb integration supplies paid traffic estimates. Social SEO also supports daily imports and seven official lifetime account adapters. YouTube public research is separate. Claude is optional; no affiliation with Semrush.
+**Status: v0.6 — 50-page site crawl, AI search readiness, a monthly Top-10 action plan, keyword ideas, Google speed tests, free SEO imports, optional provider data and a private Windows service.** Inspect public website markup immediately, then add your authorized Google data, supplied backlinks and observed ranks. Optional Similarweb integration supplies paid traffic estimates. Social SEO also supports daily imports and seven official lifetime account adapters. YouTube public research is separate. Claude is optional; no affiliation with Semrush.
 
-Start at **Domain overview**. Enter a public website and click **Analyze website**. Waypoint checks robots.txt, fetches the HTTPS homepage and up to two eligible internal pages, and shows actual titles, descriptions, headings, topics, links and static audit findings. **Use saved / imported data** opens your stored workspace without a new scan. Use **Import SEO data** for actual CSV observations. Public HTML does not reveal traffic, search rankings or inbound backlink coverage. The web workspace has no fictional demo option or preset domain. See [the free SEO workflow](docs/FREE_SEO.md), [social performance setup](docs/PERFORMANCE_DATA.md) and [optional Claude plugin](docs/PLUGIN.md).
+Start at **Domain overview**. Enter a public website and click **Analyze website**. Waypoint checks robots.txt, crawls the HTTPS homepage and up to 49 linked pages, and shows a ranked **Top 10 actions for this month**, page issues, AI search readiness and speed signals. **Use saved / imported data** opens your stored workspace without a new scan. Use **Import SEO data** for actual CSV observations. Public HTML does not reveal traffic, search rankings or inbound backlink coverage. The web workspace has no fictional demo option or preset domain. See [the free SEO workflow](docs/FREE_SEO.md), [social performance setup](docs/PERFORMANCE_DATA.md) and [optional Claude plugin](docs/PLUGIN.md).
+
+## What's new in 0.6
+
+Features researched from open-source SEO projects (OpenSEO, crawlseo, RankMeFast, bisibility, GeoLook, GEO Optimizer, Claude SEO, marketingskills and Open SEO MCP Skills) and reimplemented in Waypoint's own code:
+
+- **Top 10 actions this month** on Overview, ranked from your crawl, Search Console data, rankings, backlinks, AI readiness and speed. Tick actions off; progress is saved per site and month. Each scan shows what was fixed or newly found since the previous one.
+- **Site health → Issues / Pages:** breadth-first crawl of up to 50 pages with duplicate and missing titles/descriptions, missing or multiple H1s, thin content, noindex, broken pages, non-canonical internal links, missing alt text and deep pages. Gzip/brotli responses are decoded with a size cap.
+- **Site health → AI search:** a 100-point readiness score covering which AI answer engines and search crawlers robots.txt allows (ChatGPT, Claude, Perplexity, Google, Bing; training crawlers listed separately), llms.txt, structured data, quotable content, trust signals and hidden prompt-injection text. Generates a ready-to-upload **llms.txt** and **Organization/WebSite/FAQ JSON-LD**.
+- **Site health → Speed:** Google PageSpeed Insights (Lighthouse score, Core Web Vitals, field data and biggest savings) plus speed signals from the crawl. Add a free `PAGESPEED_API_KEY`; Google's keyless quota is often busy.
+- **Keywords → Find keyword ideas:** Google Autocomplete suggestions for a seed and country, grouped into questions, buying, comparisons and local, with off-topic and job-search noise hidden. Shows which ideas you already get impressions for; one click adds an idea to rank tracking.
+- **Keywords → Quick-win keywords:** almost page one, seen-not-clicked, missing pages, question searches and top performers from Search Console data, with a rough extra-clicks estimate.
+- **Compare sites** now compares pages, issues, AI readiness, structured data and llms.txt.
+- Three new MCP tools: `keyword_ideas`, `page_speed` and `seo_opportunities` (24 in total).
 
 ## Run locally
 
@@ -34,13 +47,13 @@ Open **http://127.0.0.1:4318**. The API serves the production frontend and binds
 | Domain overview | Live public site summary, query clicks/impressions/CTR when supplied, optional GA4 totals and separate traffic estimates | Sources and date scopes remain separate; public HTML reveals no private traffic |
 | Keyword research | Observed page topics plus supplied/authorized query performance; CSV export and watchlist | Topic frequency is not search volume; no global CPC/difficulty index |
 | Backlink analysis | Analyze supplied inbound link URLs and referring hosts; inspect scanned outbound links separately | Outbound page links are not inbound backlinks; no global link discovery |
-| Site audit | Automatic limited public scan plus optional pasted/uploaded HTML checks | Homepage + up to two internal pages, subject to robots and safety limits; static checklist, no JavaScript rendering or Core Web Vitals |
+| Site health | Issues, Pages, AI search and Speed tabs: 50-page crawl findings, AI crawler access, llms.txt and JSON-LD generators, Google PageSpeed Insights | Up to 50 pages, subject to robots and safety limits; static checklist, no JavaScript rendering or Core Web Vitals |
 | Rank tracking | Watchlist plus imported dated rank observations and previous-observation change | No generated positions or scheduled SERP checks; query average position stays separate |
 | Competitor research | Query-set overlap and potential gaps across imported domains | Matching declared dates and filter scope required; domain alone reveals no private competitor data |
 | Reporting | Combine saved scan, query snapshot, supplied links, ranks, audit and optional provider reports; JSON/keyword CSV/print | Sources, windows and limitations retained; browser PDF delivery depends on browser |
 | Social SEO | Daily performance trends; query impressions/clicks/CTR; topic-associated content; similar-post comparisons; account benchmarks; native YouTube research | Imports and normalized ingestion for eight platforms; seven official account adapters with separate lifetime snapshots; YouTube public discovery; no fabricated metrics |
 | Publishing utilities | Share metadata, caption checks and campaign links under a secondary expandable section | Local markup/editorial checks, no posting |
-| Integrations + optional Claude plugin | Whole-platform plugin with three skills and 21 MCP tools; source-bundle download; separate in-app advisor | Claude subscription runs in local Claude Code; web advisor requires its own Anthropic key |
+| Integrations + optional Claude plugin | Whole-platform plugin with three skills and 24 MCP tools; source-bundle download; separate in-app advisor | Claude subscription runs in local Claude Code; web advisor requires its own Anthropic key |
 
 For Search Console, export **Performance → Search results → Queries** for your selected dates, then import the Queries CSV with that same window and filter scope. English native and canonical headers are supported. Query-table totals can omit anonymized/truncated queries and are not whole-site traffic or global search volume. Overlapping snapshots are never added together. See [formats, import limits and methodology](docs/FREE_SEO.md).
 
@@ -54,7 +67,7 @@ For third-party traffic estimates, configure `SIMILARWEB_API_KEY`, restart, choo
 
 ## Claude setup
 
-To use your **Claude subscription**, sign in to Claude Code with your eligible account and open **Start-Claude-SEO.cmd** on the host computer. It checks authentication, reuses the direct `waypoint` registration when present or loads the bundled plugin, and clears API-key/base-URL overrides only in its own process. It preserves `.env` and saved credentials. Plan limits still apply. Try: “Read my imported SEO report for mydomain.com and explain the next steps.” For CSVs, request a validation preview first, then explicitly request the import. Only `seo_import` writes data; the other 20 tools are read-only.
+To use your **Claude subscription**, sign in to Claude Code with your eligible account and open **Start-Claude-SEO.cmd** on the host computer. It checks authentication, reuses the direct `waypoint` registration when present or loads the bundled plugin, and clears API-key/base-URL overrides only in its own process. It preserves `.env` and saved credentials. Plan limits still apply. Try: “Read my imported SEO report for mydomain.com and explain the next steps.” For CSVs, request a validation preview first, then explicitly request the import. Only `seo_import` writes data; the other 23 tools are read-only.
 
 Subscription access stays in local Claude Code. It is not a subscription-backed web API or remote web chat. [Detailed subscription and MCP setup](docs/CLAUDE.md).
 

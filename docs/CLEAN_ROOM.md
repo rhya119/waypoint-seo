@@ -35,12 +35,12 @@ The mint/forest palette, compass identity, typography, navigation, copy, charts,
 | Domain overview | Explicit public HTTPS scan, saved findings, actual imported/authorized query data and separately labeled optional provider reports |
 | Keyword research | Homepage word-frequency topics plus imported/authorized query clicks, impressions, CTR and average position; no global keyword index |
 | Backlinks | User-supplied source/target link snapshots; scanned outbound links shown separately, without claiming inbound coverage |
-| Site audit | Robots-aware homepage plus up to two eligible same-origin pages, with independent markup checks; pasted HTML checks also available |
+| Site audit | Robots-aware breadth-first crawl of up to 50 same-origin pages with page-issue grouping, AI search readiness and speed signals; pasted HTML checks also available |
 | Rank tracking | Watchlist and actual supplied dated rank observations; no automated SERP scraping or invented positions |
 | Competitors | Compatible imported query-set overlap/gaps; optional paid traffic estimates do not reveal private account analytics |
 | Reports | Source-aware saved observations, scan findings, audits and optional provider reports, preserving independent dates and missing values |
 | Social SEO | Daily imports, seven official account adapters with separate lifetime counters, lexical comparisons and public YouTube discovery |
-| Claude | Optional local Claude Code toolkit, 21 MCP tools and three original workflow skills; separate opt-in Anthropic API advisor |
+| Claude | Optional local Claude Code toolkit, 24 MCP tools and three original workflow skills; separate opt-in Anthropic API advisor |
 
 The scanner uses a deliberately limited original collection design: public-address DNS validation and IP pinning, TLS hostname checks, robots policy, redirect restrictions, byte/deadline caps and static parsing. It does not log in, execute page scripts, bypass restrictions or reproduce commercial crawling coverage. Topics are lexical frequencies; page links are not a backlink index; checklist scores are not vendor scores or search-engine rankings.
 
@@ -55,3 +55,16 @@ Only normal third-party libraries from npm are dependencies. The project contain
 ## Unknown and deferred
 
 No claims are made about reproducing commercial data coverage, accuracy, scoring formulas, private endpoints or full product parity. A broad licensed keyword/backlink index, full-site crawler, scheduled SERP collection and authenticated multi-user public hosting remain roadmap work. The current limited public scanner and private single-owner service do not establish those capabilities. Feature categories came from public observation and the user brief; backend and UI behavior were designed independently.
+
+## Open-source feature research (0.6)
+
+On 2026-10-16 the public READMEs of these projects were read for their feature lists: every-app/open-seo (MIT), crawlseo/crawlseo (MIT), SelmiAbderrahim/rankme.fast (AGPL-3.0), CorgiCorner/bisibility (AGPL-3.0), aigclink/geolook (MIT), Auriti-Labs/geo-optimizer-skill (MIT), AgriciDaniel/claude-seo (MIT), coreyhaines31/marketingskills (MIT), Ryze-AI-Adgent/open-seo-mcp-skills (MIT), the GitHub `ai-seo` topic and serpapi/awesome-seo-tools. No source code was copied; the AGPL projects in particular were used for feature ideas only.
+
+| Idea seen in | Waypoint 0.6 implementation |
+| --- | --- |
+| crawlseo, RankMeFast | Bounded breadth-first crawl, grouped page issues, Search Console opportunity lists, PageSpeed Insights, Autocomplete keyword ideas |
+| GEO Optimizer, GeoLook, Claude SEO, marketingskills ai-seo | AI search readiness: AI crawler access in robots.txt, llms.txt, schema, quotable content, trust signals, hidden-instruction detection; llms.txt and JSON-LD generators |
+| GeoLook | Scan-to-scan verification ("fixed since last scan") |
+| OpenSEO, Open SEO MCP Skills | New MCP tools for keyword ideas, speed tests and opportunities |
+
+Scores, weights, thresholds and copy are Waypoint's own; Core Web Vitals thresholds follow Google's public documentation.

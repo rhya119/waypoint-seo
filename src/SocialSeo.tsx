@@ -5,7 +5,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
-  Check,
   ChevronDown,
   FileUp,
   Hash,
@@ -183,11 +182,8 @@ export default function SocialSeo({
     <div className="performance-workspace">
       <div className="performance-intro">
         <div>
-          <span className="eyebrow">SOCIAL INTELLIGENCE</span>
-          <h2>Know what earns attention.</h2>
-          <p>
-            See which topics move, which content connects, and where to go next.
-          </p>
+          <h2>Social performance</h2>
+          <p>See which posts and keywords perform best.</p>
         </div>
         <div className="performance-intro-actions">
           <button
@@ -196,14 +192,14 @@ export default function SocialSeo({
             onClick={() => setImportOpen(true)}
           >
             <FileUp size={15} />
-            Import performance
+            Import CSV
           </button>
           <button
             className="button primary"
-            onClick={() => setTab("Live research")}
+            onClick={onIntegrations}
           >
-            <Radio size={15} />
-            Research live
+            <Layers3 size={15} />
+            Connect accounts
           </button>
         </div>
       </div>
@@ -215,17 +211,19 @@ export default function SocialSeo({
           <strong>
             {dataset === "example"
               ? "Example workspace"
-              : "Your performance data"}
+              : "Daily performance"}
           </strong>
           <span>
             {dataset === "example"
-              ? "Fictional accounts · explore the analysis"
+              ? "Fictional data for trying the tools"
               : performance?.coverage.importedAt
                 ? `Last import ${new Date(performance.coverage.importedAt).toLocaleDateString()}`
-                : "No accounts or files connected yet"}
+                : "Add a daily performance CSV to get started"}
           </span>
         </div>
-        <div className="source-toggle">
+        <details className="performance-data-options">
+          <summary>Data options</summary>
+          <div className="source-toggle">
           <button
             aria-pressed={dataset === "imported"}
             className={dataset === "imported" ? "selected" : ""}
@@ -239,9 +237,10 @@ export default function SocialSeo({
             className={dataset === "example" ? "selected" : ""}
             onClick={() => setDataset("example")}
           >
-            Explore example
+            Try example data
           </button>
-        </div>
+          </div>
+        </details>
       </div>
       <div className="performance-filter" style={{ display: tab === "API snapshots" ? "none" : undefined }}>
         <form
@@ -257,9 +256,9 @@ export default function SocialSeo({
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             maxLength={200}
-            placeholder="Research a keyword or topic…"
+            placeholder="Filter your data by keyword…"
           />
-          <button className="button primary small">Explore</button>
+          <button className="button primary small">Filter</button>
         </form>
         <select
           aria-label="Performance platform"
@@ -321,7 +320,7 @@ export default function SocialSeo({
             className={tab === name ? "selected" : ""}
             onClick={() => setTab(name)}
           >
-            {name}
+            {({ Overview: 'Daily overview', 'Keyword performance': 'Keywords', 'Similar content': 'Similar posts', Competitors: 'Accounts', 'Live research': 'YouTube research', 'API snapshots': 'Connected posts' } as Record<string, string>)[name]}
           </button>
         ))}
         <button
@@ -356,30 +355,25 @@ export default function SocialSeo({
           <div className="performance-empty-art">
             <BarChart3 size={43} />
           </div>
-          <span className="eyebrow">START WITH YOUR NUMBERS</span>
-          <h3>Performance needs a source.</h3>
-          <p>
-            Import daily post metrics or search-query exports from any major
-            platform. Compare your content, track query clicks, and benchmark
-            the accounts you include.
-          </p>
+          <h3>Add your performance data</h3>
+          <p>Import daily post or search-query metrics. For account API pulls, open Connected posts.</p>
           <div>
             <button
               className="button primary"
               onClick={() => setImportOpen(true)}
             >
               <FileUp size={15} />
-              Import a dataset
+              Import CSV
             </button>
             <button
               className="button secondary"
-              onClick={() => setDataset("example")}
+              onClick={() => setTab("API snapshots")}
             >
-              Explore the example <ArrowRight size={15} />
+              Connected posts <ArrowRight size={15} />
             </button>
           </div>
           <button className="text-button" onClick={onIntegrations}>
-            View API and Claude integrations <ArrowUpRight size={14} />
+            Connect an account <ArrowUpRight size={14} />
           </button>
         </div>
       )}
@@ -807,8 +801,8 @@ export default function SocialSeo({
       )}
       {tab === "Live research" && (
         <Panel
-          title="Live YouTube discovery"
-          detail="Find videos for a keyword and compare public lifetime performance."
+          title="Search YouTube"
+          detail="Find public videos by keyword and compare lifetime views."
         >
           <form
             className="live-research-form"
@@ -895,37 +889,25 @@ export default function SocialSeo({
           ) : (
             <div className="live-info">
               <Radio size={28} />
-              <h3>Research beyond your own posts.</h3>
-              <p>
-                The native connector uses your server’s YouTube API key. Public
-                discovery provides views, likes, comments, and publication
-                dates. These are video totals, not keyword search volume.
-              </p>
+              <h3>Find videos about a topic</h3>
+              <p>Search with a connected YouTube API key. Video views show lifetime performance, not keyword search volume.</p>
               <button className="text-button" onClick={onIntegrations}>
-                API setup and platform support <ArrowRight size={14} />
+                Set up YouTube <ArrowRight size={14} />
               </button>
             </div>
           )}
-          <p className="performance-note">
-            For Instagram, TikTok, LinkedIn organizations, Facebook Pages, X,
-            Pinterest and Threads, configure native account pulls in Integrations
-            and view the results under API snapshots. Daily CSV/JSON imports
-            remain available for all eight platforms.
-          </p>
+          <details className="performance-details"><summary>Sources and limits</summary><p className="performance-note">Searches use YouTube API quota. Other social accounts are available through Connections → Pull recent posts; see the results in Connected posts. CSV and JSON imports support daily metrics from all eight platforms.</p></details>
         </Panel>
       )}
       {performance && hasData && tab !== "API snapshots" && (
-        <div className="performance-methods">
-          <span>
-            <Check size={13} />
-            Source and metric coverage retained
-          </span>
+        <details className="performance-details">
+          <summary>How these metrics are calculated</summary>
           <p>
             {performance.disclosure} Engagement/views uses only daily rows with
             views and all four interaction fields (likes + comments + shares +
             saves). Unknown values show “—”. Previous period: {performance.period.previousFrom || 'unavailable'} — {performance.period.previousTo || 'unavailable'}. Coverage: {performance.comparison.currentDays}/{performance.comparison.expectedDays} current days, {performance.comparison.previousDays}/{performance.comparison.expectedDays} previous days.
           </p>
-        </div>
+        </details>
       )}
       {claudeEnabled && tab !== "API snapshots" && (
         <div className="optional-ai">
@@ -948,7 +930,7 @@ export default function SocialSeo({
       )}
       <details className="publishing-tools">
         <summary>
-          Sharing metadata and publishing utilities <ChevronDown size={15} />
+          More tools: share previews, captions and campaign links <ChevronDown size={15} />
         </summary>
         <SocialTools domain={domain} />
       </details>

@@ -9,6 +9,7 @@ import { createYouTubeProvider } from './youtube.js';
 import { createSocialConnectors } from './connectors.js';
 import { createGoogleSeoProvider } from './google-data.js';
 import { createTrafficEstimateProvider } from './traffic-estimates.js';
+import { createPageSpeedProvider } from './research.js';
 if (process.env.SEO_PROVIDER && process.env.SEO_PROVIDER !== 'demo') throw new Error('Only SEO_PROVIDER=demo is implemented.');
 const host = process.env.HOST || '127.0.0.1';
 if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('This scaffold has no authentication and must bind to loopback.');
@@ -17,6 +18,7 @@ const db = new DatabaseSync(file); const app = createApp(db, undefined, createCl
   privateOrigin: process.env.WAYPOINT_PRIVATE_ORIGIN,
   google: createGoogleSeoProvider({ accessToken: process.env.GOOGLE_SEO_ACCESS_TOKEN, ga4PropertyId: process.env.GA4_PROPERTY_ID, ga4Domain: process.env.GA4_SITE_DOMAIN }),
   trafficEstimates: createTrafficEstimateProvider({ apiKey: process.env.SIMILARWEB_API_KEY }),
+  pageSpeed: createPageSpeedProvider({ apiKey: process.env.PAGESPEED_API_KEY }),
 });
 app.use(express.static(resolve('dist')));
 app.get('/{*path}', (_req, res) => res.sendFile(resolve('dist/index.html')));

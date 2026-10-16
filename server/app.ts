@@ -13,7 +13,7 @@ import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { createSocialConnectors, initSnapshots, readSnapshots, savePull, ConnectorError, type SocialConnectors } from './connectors.js';
 import { nativePlatform, pullInput, snapshotFilters } from '../shared/connectors.js';
-import { initWebData, importWebData, previewWebImport, webReport, webDomains, WebDataError, saveSiteScan, saveGoogleData, saveTrafficEstimate } from './web-data.js';
+import { initWebData, importWebData, previewWebImport, webReport, webDomains, WebDataError, saveSiteScan, saveGoogleData, saveTrafficEstimate, savePageSpeed } from './web-data.js';
 import { webDomain, trackInput } from '../shared/web-data.js';
 import { createClaudeCodeStatus } from './claude-code.js';
 import { createSiteScanner, SiteScanError } from './site-scan.js';
@@ -21,6 +21,8 @@ import { createGoogleSeoProvider, GoogleSeoError, type GoogleSeoProvider } from 
 import { googleSeoInput } from '../shared/google-data.js';
 import { createTrafficEstimateProvider, TrafficEstimateError, type TrafficEstimateProvider } from './traffic-estimates.js';
 import { trafficEstimateInput } from '../shared/traffic-estimates.js';
+import { createPageSpeedProvider, createKeywordIdeas, ResearchError, type PageSpeedProvider, type KeywordIdeasProvider } from './research.js';
+import { pageSpeedInput, keywordIdeasInput } from '../shared/research.js';
 export function normalizeDomain(value: string): string {
   const url = new URL(value.includes('://') ? value : `https://${value}`);
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port || !url.hostname.includes('.') || !/^[a-z0-9.-]+$/i.test(url.hostname)) throw new Error('Enter a valid domain, such as example.com.');
@@ -29,7 +31,7 @@ export function normalizeDomain(value: string): string {
 const domainSchema = z.string().trim().max(253).transform((value, ctx) => {
   try { return normalizeDomain(value); } catch { ctx.addIssue({ code: 'custom', message: 'Enter a valid HTTP(S) domain.' }); return z.NEVER; }
 });
-export type AppOptions = { privateOrigin?: string; scanner?: ReturnType<typeof createSiteScanner>; google?: GoogleSeoProvider; trafficEstimates?: TrafficEstimateProvider };
+export type AppOptions = { privateOrigin?: string; scanner?: ReturnType<typeof createSiteScanner>; google?: GoogleSeoProvider; trafficEstimates?: TrafficEstimateProvider; pageSpeed?: PageSpeedProvider; keywordIdeas?: KeywordIdeasProvider };
 export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService(), youtube: YouTubeProvider = createYouTubeProvider(), connectors: SocialConnectors = createSocialConnectors(), options: AppOptions = {}) {
   let privateOrigin = '';
   if (options.privateOrigin) { const origin = new URL(options.privateOrigin); if (origin.protocol !== 'https:' || !origin.hostname.endsWith('.ts.net') || origin.username || origin.password || origin.port || origin.pathname !== '/' || origin.search || origin.hash) throw new Error('Private origin must be an HTTPS Tailscale .ts.net origin.'); privateOrigin = origin.origin; }
@@ -45,6 +47,8 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   const scanner = options.scanner || createSiteScanner();
   const google = options.google || createGoogleSeoProvider();
   const trafficEstimates = options.trafficEstimates || createTrafficEstimateProvider();
+  const pageSpeed = options.pageSpeed || createPageSpeedProvider();
+  const keywordIdeas = options.keywordIdeas || createKeywordIdeas();
   app.use((req, res, next) => {
     if (!['127.0.0.1', 'localhost', '[::1]', '::1', ...(privateOrigin ? [new URL(privateOrigin).hostname] : [])].includes(req.hostname)) { res.status(403).json({ error: 'Only loopback or the configured private Tailscale host is accepted.' }); return; }
     next();
@@ -63,12 +67,20 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', mode: 'public-scan-and-source-data', legacyProvider: provider.mode }));
   app.get('/api/web/domains', (_req, res) => res.json(webDomains(db)));
   app.get('/api/web/report', (req, res) => res.json(webReport(db, webDomain.parse(req.query.domain), req.query.datasetId ? z.coerce.number().int().positive().parse(req.query.datasetId) : undefined)));
-  app.get('/api/web/connections', (_req, res) => res.json({ google: google.status(), trafficEstimates: trafficEstimates.status() }));
+  app.get('/api/web/connections', (_req, res) => res.json({ google: google.status(), trafficEstimates: trafficEstimates.status(), pageSpeed: pageSpeed.status() }));
   app.post('/api/web/scan', async (req, res) => { const { domain } = z.object({ domain: webDomain }).parse(req.body); res.json(saveSiteScan(db, await scanner.scan(domain), domain)); });
   app.post('/api/web/google', async (req, res) => { const input = googleSeoInput.parse(req.body); res.json(saveGoogleData(db, await google.pull(input.domain, input.from, input.to), input)); });
   // Optional metered providers run only on this explicit POST, never when a
   // website is selected, a report is read, or connection status is inspected.
   app.post('/api/web/traffic-estimates', async (req, res) => { const input = trafficEstimateInput.parse(req.body); res.json(saveTrafficEstimate(db, await trafficEstimates.pull(input), input)); });
+  // Explicit research actions only: a speed test of the saved scan's final URL, and
+  // Autocomplete ideas for a typed seed. Neither runs when a report is read.
+  app.post('/api/web/pagespeed', async (req, res) => {
+    const input = pageSpeedInput.parse(req.body);
+    const site = webReport(db, input.domain).site;
+    res.json(savePageSpeed(db, await pageSpeed.run(input, site?.finalUrl || `https://${input.domain}/`)));
+  });
+  app.post('/api/web/keyword-ideas', async (req, res) => res.json(await keywordIdeas.ideas(keywordIdeasInput.parse(req.body))));
   app.post('/api/web/import/preview', (req, res) => { const result = previewWebImport(req.body); res.json({ valid: result.valid, count: result.count, sample: result.sample, errors: result.errors }); });
   app.post('/api/web/import', (req, res) => res.json(importWebData(db, req.body)));
   app.post('/api/web/track', (req, res) => { const r = trackInput.parse(req.body); db.prepare('INSERT OR IGNORE INTO web_tracks VALUES(?,?,?,?)').run(r.domain, r.keyword, r.country, r.device); res.json({ ...r, message: 'Keyword saved. Positions appear only after you import actual observations.' }); });
@@ -135,7 +147,7 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   });
   app.use('/api', (_req, res) => { res.status(404).json({ error: 'API route not found.' }); });
   app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    if (error instanceof PerformanceError || error instanceof YouTubeError || error instanceof ConnectorError || error instanceof WebDataError || error instanceof SiteScanError || error instanceof GoogleSeoError || error instanceof TrafficEstimateError) { res.status(error.status).json({ error: error.message }); return; }
+    if (error instanceof PerformanceError || error instanceof YouTubeError || error instanceof ConnectorError || error instanceof WebDataError || error instanceof SiteScanError || error instanceof GoogleSeoError || error instanceof TrafficEstimateError || error instanceof ResearchError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof ClaudeError) { res.status(error.status).json({ error: error.message }); return; }
     if (error instanceof z.ZodError) { res.status(400).json({ error: error.issues[0]?.message || 'Invalid request.' }); return; }
     const status = (error as { status?: number }).status;

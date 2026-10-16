@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Database, Download, RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import type { ConnectionStatus, NativePlatform } from "../shared/connectors";
 import { api } from "./lib";
 export default function NativeConnections() {
@@ -26,14 +26,13 @@ export default function NativeConnections() {
     <section className="panel native-connections" data-tour="connections">
       <div className="panel-head">
         <div>
-          <h2>Connect your social accounts</h2>
-          <p>
-            Manual official API pulls for seven platforms. Credentials stay in
-            your server’s ignored .env.
-          </p>
+          <h2>Social accounts</h2>
+          <p>Set up a platform, then pull your recent posts.</p>
         </div>
-        <Database size={22} />
+        <button className="button secondary" onClick={() => void refresh()}><RefreshCw size={14} />Check status</button>
       </div>
+      <details className="connection-options">
+        <summary>Pull options and data limits</summary>
       <div className="native-filters">
         <label>
           Posts per pull
@@ -47,18 +46,15 @@ export default function NativeConnections() {
             <option value={50}>Up to 50 recent posts</option>
           </select>
         </label>
-        <button className="button secondary" onClick={() => void refresh()}>
-          <RefreshCw size={14} />
-          Refresh connection status
-        </button>
       </div>
       <p className="native-disclosure">
         Configure an authorized token and account ID below, restart the server,
-        then pull. These are lifetime post snapshots; inspect them under Social
-        SEO → API snapshots. “Configured” means settings are present; a
+        then pull. These are lifetime post totals; inspect them under Social
+        performance → Connected posts. “Settings present” means settings are present; a
         successful pull verifies access. No automatic background polling or
         token refresh.
       </p>
+      </details>
       {error && (
         <p className="social-error" role="alert">
           {error}
@@ -73,16 +69,16 @@ export default function NativeConnections() {
         {connections.map((c) => (
           <article className="native-connection" key={c.platform}>
             <div>
-              <h3 className="capitalize">{c.platform}</h3>
+              <h3>{({ instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', x: 'X', pinterest: 'Pinterest', threads: 'Threads' } as Record<string, string>)[c.platform] || c.platform}</h3>
               <span className={`tag ${c.configured ? "" : "amber"}`}>
                 {c.configured
                   ? "Settings present"
                   : "Setup required"}
               </span>
             </div>
-            <p>{c.metrics}</p>
             <details>
-              <summary>Account access and environment setup</summary>
+              <summary>{c.configured ? 'Account setup' : 'How to connect'}</summary>
+              <p>{c.metrics}</p>
               <p>{c.scope}</p>
               <p>Set these names in .env (never in browser code):</p>
               <ul>
@@ -115,7 +111,7 @@ export default function NativeConnections() {
                     { maxPosts },
                   );
                   setNotice(
-                    `${c.platform}: saved ${r.count} lifetime snapshots. ${r.warnings.join(" ")} Open Social SEO → API snapshots to view them.`,
+                    `${c.platform}: saved ${r.count} posts with lifetime totals. ${r.warnings.join(" ")} View Social performance → Connected posts.`,
                   );
                 } catch (e) {
                   setError((e as Error).message);
@@ -130,11 +126,6 @@ export default function NativeConnections() {
           </article>
         ))}
       </div>
-      <p className="integration-help">
-        CSV imports and normalized daily JSON ingestion remain available for all
-        eight platforms. YouTube public discovery uses the separate API-key
-        setup below.
-      </p>
     </section>
   );
 }

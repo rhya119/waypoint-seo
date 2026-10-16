@@ -48,7 +48,15 @@
 - Loopback production service on 4321 with private Tailscale HTTPS, one allowed private origin, supervised restarts and separately configured Windows automatic startup in this workspace.
 - Current limits: host must stay awake/signed in; full reboot recovery untested; no app-level users/roles; subscription is local Claude Code, not a web backend. Live Google/Similarweb and social permission checks still require provider credentials/entitlements; configuration is not proof of access.
 
-## 0.6 — Expanded provider-backed research
+## 0.6 — Growth plan, site crawl and AI search readiness (implemented)
+
+- Overview Top-10 monthly action plan ranked from crawl, query, rank, backlink, AI and speed data, with per-month progress and scan-to-scan fixed/new changes.
+- Breadth-first crawl of up to 50 pages (was 3) with grouped page issues, compressed-response decoding, per-page redirect limits and clean stops at size/time budgets.
+- AI search readiness score, AI crawler access, llms.txt detection, llms.txt and JSON-LD generators.
+- Google PageSpeed Insights tests (optional free key) plus crawl speed signals; Google Autocomplete keyword ideas with relevance filtering; Search Console quick-win lists; richer site comparisons.
+- MCP toolkit expanded to 24 tools.
+
+## 0.7 — Expanded provider-backed research
 
 - Select licensed keyword, backlink, and SERP data sources after reviewing coverage, cost, terms, and retention constraints.
 - Convert the provider interface to async operations with independent capability flags, pagination, market/device/date filters, timeouts, bounded retries, usage budgets, and cache keys.
@@ -57,7 +65,7 @@
 - Extend existing compatible query-set comparisons to licensed index/content datasets without claiming private competitor traffic.
 - Acceptance: integration fixtures and a limited live smoke test establish timestamps, source labels, costs, and graceful failure.
 
-## 0.7 — Controlled site crawler
+## 0.8 — Larger crawls and scheduling
 
 - Extend the existing three-page robots-aware scanner into an ownership/permission workflow with explicit larger crawl budgets, same-origin boundaries and sitemap traversal.
 - Preserve existing HTTPS/public-IP pinning, redirect revalidation, private-address restrictions, response-byte limits and deadlines while adding restricted-worker networking and configurable per-site budgets.
@@ -65,7 +73,7 @@
 - Persist pages, response headers, links and findings; detect duplicate titles, broken internal links, canonical conflicts and indexing issues.
 - Acceptance: local test sites cover redirects, private-IP attempts, robots exclusions, malformed HTML and cancellation; never expose arbitrary URL fetching as an unguarded endpoint.
 
-## 0.8 — Scheduled rank collection and reports
+## 0.9 — Scheduled rank collection and reports
 
 - Extend imported manual observation history with provider-collected SERP observations keyed by project, keyword, market, device and date.
 - Scheduled jobs with idempotency keys, provider quotas, alerts and missing-result states.

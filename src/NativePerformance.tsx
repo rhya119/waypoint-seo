@@ -71,20 +71,23 @@ export default function NativePerformance({
     <section className="panel native-performance" data-tour="snapshots">
       <div className="panel-head">
         <div>
-          <h2>API snapshots</h2>
+          <h2>Connected posts</h2>
           <p>
-            Recent posts from your connected accounts, with lifetime counters.
+            Latest saved posts from your accounts. Metrics are lifetime totals.
           </p>
         </div>
         <button className="button secondary" onClick={onConnect}>
           <Plug size={15} />
-          Connect / pull data
+          Connect accounts
         </button>
       </div>
+      <details className="connection-options">
+      <summary>About this data</summary>
       <p className="native-disclosure">
         {data?.disclosure ||
           "Lifetime captures stay separate from your daily imports. No keyword search-volume data is inferred from these posts."}
       </p>
+      </details>
       <div className="native-filters">
         <label>
           Platform
@@ -101,7 +104,7 @@ export default function NativePerformance({
         </label>
         <label>
           <Search size={14} />
-          Topic in title or caption
+          Filter by topic
           <input
             aria-label="Snapshot topic"
             value={keyword}
@@ -114,7 +117,7 @@ export default function NativePerformance({
           onClick={() => setRefresh((v) => v + 1)}
         >
           <RefreshCw size={14} />
-          Refresh saved data
+          Refresh
         </button>
         <button
           className="button secondary"
@@ -139,13 +142,12 @@ export default function NativePerformance({
       {!data && !error && <p role="status">Loading saved snapshots…</p>}
       {data && !data.posts.length && (
         <div className="performance-empty">
-          <h3>No API snapshots in this selection.</h3>
+          <h3>No connected posts yet</h3>
           <p>
-            Open Integrations, configure a provider, then click “Pull recent
-            posts”. Imports and example data are available in the other tabs.
+            Connect an account, then click “Pull recent posts”. Your posts and lifetime results will appear here.
           </p>
           <button className="button primary" onClick={onConnect}>
-            Open Integrations
+            Connect an account
           </button>
         </div>
       )}
@@ -206,8 +208,7 @@ export default function NativePerformance({
         <section className="native-comparison" aria-live="polite">
           <h3>Similar to “{reference.title}”</h3>
           <p>
-            Same-platform title/caption word overlap in this selection.
-            Different post ages and capture times affect lifetime comparisons.
+            Similar words in posts on the same platform. Post ages and capture times affect lifetime comparisons.
           </p>
           {matches.length ? (
             matches.map(({ post: p, score }) => (

@@ -69,7 +69,10 @@ Merge the generated `waypoint` entry into the existing `mcpServers` object. On W
 | `competitor_research` | Compare imported query sets with matching dates and scope |
 | `seo_import_preview` | Validate supplied CSV without saving |
 | `seo_import` | **Write** validated CSV only after the user's import request |
-| `website_scan` | Explicit read-only public homepage + up to two internal-page inspection, robots and network safeguards |
+| `website_scan` | Explicit read-only public crawl of up to 50 pages: page issues, AI search readiness, speed signals, robots and network safeguards |
+| `keyword_ideas` | Explicit live Google Autocomplete ideas for a seed and country; not search volume |
+| `page_speed` | Explicit live Google PageSpeed Insights test; uses `PAGESPEED_API_KEY` when set |
+| `seo_opportunities` | Quick-win keywords from imported Search Console queries |
 | `site_audit` | Eight actual static checks on supplied HTML |
 | `social_audit` | Social metadata checks and illustrative preview fields |
 | `social_meta_tags` | Escaped metadata HTML generation |

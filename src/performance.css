@@ -5,3 +5,109 @@
 @media(max-width:900px){.performance-charts,.integration-grid{grid-template-columns:1fr}.performance-kpis{grid-template-columns:repeat(2,1fr)}.performance-source{flex-wrap:wrap}.performance-methods{flex-direction:column;gap:10px}.performance-intro h2{font-size:27px}.similar-select{flex-wrap:wrap}.similar-select label{flex-basis:100%}.live-research-form{flex-wrap:wrap}.live-research-form>input{flex-basis:70%}}
 @media(max-width:640px){.sidebar{background:#18352f;border-bottom:1px solid #2c4b37}.sidebar nav button{color:#a1b99e}.sidebar nav button.active{background:#315c44;color:#e0efd5}.sidebar nav button:nth-child(8),.sidebar nav button:nth-child(9){margin-top:0;padding-top:9px;border:0;border-radius:6px}.topbar{height:48px}.topbar-right .optional-status{display:none}.topbar-right button{display:flex;font-size:9px}.topbar-right .demo-dot{display:none}.topbar>div{font-size:10px}.performance-intro h2{font-size:24px}.performance-intro p{font-size:11px}.performance-intro-actions{width:100%}.performance-intro-actions>.button{flex:1;font-size:10px;padding:10px}.performance-source{padding:12px;gap:12px}.performance-source strong{font-size:11px}.source-toggle{width:100%}.source-toggle>button{flex:1}.performance-filter{gap:8px}.performance-filter form{flex-basis:100%;gap:6px}.performance-filter form>input{font-size:11px}.performance-filter select{max-width:110px}.performance-filter label{gap:4px;font-size:8px}.performance-filter label input{max-width:103px;font-size:9px}.performance-filter .icon-button{margin-left:auto}.performance-tabs{gap:17px}.performance-tabs>button:not(.performance-export){font-size:10px}.performance-tabs .performance-export{font-size:9px}.performance-kpi{padding:17px 13px}.performance-kpi>div{font-size:10px}.performance-kpi>strong{font-size:29px}.performance-kpi>span{font-size:8px}.performance-kpi small{font-size:8px}.performance-bar-chart{height:180px;padding-inline:15px;gap:4px}.performance-bar-chart>div>small{font-size:7px}.performance-table td{font-size:11px;padding-inline:15px}.performance-table td:first-child{min-width:210px}.performance-table strong{font-size:11px}.performance-empty{padding:35px 18px}.performance-empty h3{font-size:22px}.performance-empty>p{font-size:11px}.performance-empty>div:not(.performance-empty-art){flex-direction:column}.performance-empty>.text-button{font-size:10px}.performance-empty .button{font-size:11px}.performance-empty-art{margin-bottom:20px}.similar-select{padding-inline:15px}.reference-card{margin-inline:15px;padding:16px}.reference-card h3{font-size:16px}.live-research-form{padding-inline:15px}.live-research-form>.button{flex:1;font-size:11px}.live-research-form>select{font-size:10px}.live-info{padding:30px 17px}.live-info p{font-size:11px}.import-backdrop{padding:12px}.import-dialog{padding:20px;max-height:calc(100dvh - 24px)}.import-heading h2{font-size:21px}.import-explainer{font-size:11px}.import-kind{flex-wrap:wrap}.import-kind>button{font-size:10px}.import-kind>.text-button{margin-left:0}.import-actions{flex-wrap:wrap}.import-actions>.button{flex:1;font-size:10px}.import-dialog textarea{margin-inline:0;width:100%}.integration-card{padding:21px}.integration-card h3{font-size:20px}.integration-card>p{font-size:11px}.integration-card>.tag{right:21px;top:24px}.integration-intro h2{font-size:25px}.integration-intro p{font-size:11px}.page-heading h1{font-size:22px}.performance-methods{font-size:9px}.publishing-tools>summary{font-size:10px}}
 .query-sparkline{display:flex;align-items:flex-end;gap:3px;height:34px;width:100px}.query-sparkline>span{display:block;min-width:3px;flex:1;background:#82b29a;border-radius:2px 2px 0 0}
+
+/* Focused social and connection screens. These rules do not change the app shell. */
+.performance-workspace,.integrations-workspace{gap:20px;min-width:0}
+.performance-workspace .performance-intro h2,.integrations-workspace .integration-intro h2{font-size:25px;letter-spacing:-.6px;line-height:1.35}
+.performance-workspace .performance-intro p,.integrations-workspace .integration-intro>p{font-size:14px;color:#5b7065;line-height:1.65}
+.performance-workspace .button,.integrations-workspace .button{font-size:13px;min-height:40px;padding:10px 14px;white-space:normal}
+.performance-workspace .performance-source{padding:12px 16px;align-items:center}
+.performance-workspace .performance-source strong{font-size:13px}
+.performance-workspace .performance-source>div>span:last-child{font-size:12px;color:#607369}
+.performance-workspace .performance-data-options{position:relative;flex-shrink:0}
+.performance-workspace .performance-data-options>summary{cursor:pointer;font-size:12px;color:#365e4c;padding:6px 0}
+.performance-workspace .performance-data-options .source-toggle{position:absolute;right:0;top:32px;padding:7px;background:#fff;box-shadow:0 8px 24px #173a251a;z-index:5;width:max-content}
+.performance-workspace .source-toggle button{font-size:12px;color:#526c5c;padding:9px 11px}
+.performance-workspace .performance-filter{gap:12px;padding:14px;flex-wrap:wrap}
+.performance-workspace .performance-filter form{min-width:240px}
+.performance-workspace .performance-filter form>input{font-size:14px;padding:10px 0;min-width:120px}
+.performance-workspace .performance-filter label{font-size:12px;color:#536b5d}
+.performance-workspace .performance-filter label input,.performance-workspace .performance-filter select{font-size:12px;max-width:145px;padding:10px 8px;min-height:40px}
+.performance-workspace .performance-tabs{flex-wrap:wrap;overflow:visible;gap:6px;min-height:0;border:0;padding:0}
+.performance-workspace .performance-tabs>button:not(.performance-export){padding:10px 12px;border:1px solid #dce5df;border-radius:7px;background:white;color:#526b5d;font-size:13px;min-height:40px;align-self:auto}
+.performance-workspace .performance-tabs>button.selected{background:#eaf3ed;border-color:#83ab92;color:#245c41;font-weight:600}
+.performance-workspace .performance-tabs .performance-export{font-size:12px;margin-bottom:0;margin-left:auto;padding:10px}
+.performance-workspace .performance-empty{padding:36px 24px}
+.performance-workspace .performance-empty-art{width:58px;height:58px;border-radius:14px;margin-bottom:20px;background:#eff5f0;color:#67937b}
+.performance-workspace .performance-empty-art>svg{width:30px;height:30px}
+.performance-workspace .performance-empty h3{font-size:23px}
+.performance-workspace .performance-empty>p{font-size:14px;color:#607568;max-width:510px;line-height:1.7}
+.performance-workspace .performance-empty>.text-button{font-size:13px}
+.performance-workspace .panel-head h2,.integrations-workspace .panel-head h2{font-size:17px}
+.performance-workspace .panel-head p,.integrations-workspace .panel-head p{font-size:13px;color:#627568;line-height:1.6}
+.performance-workspace .performance-kpi>div{font-size:13px;color:#536c5e}
+.performance-workspace .performance-kpi small,.performance-workspace .performance-kpi>span{font-size:11px;color:#607466;line-height:1.6}
+.performance-workspace .performance-kpi>strong{font-size:31px}
+.performance-workspace .performance-table th{font-size:12px;color:#556f5c;background:#f6f8f5}
+.performance-workspace .performance-table td,.performance-workspace .performance-table strong{font-size:13px;line-height:1.6}
+.performance-workspace .performance-table td small{font-size:11px;color:#6b7f6d}
+.performance-workspace .platform-pill{font-size:11px}
+.performance-workspace .performance-note,.performance-workspace .chart-footnote{font-size:12px;line-height:1.7;color:#637864}
+.performance-workspace .performance-details,.performance-workspace .connection-options,.integrations-workspace .connection-options,.integrations-workspace .connection-advanced{border:1px solid #dfe7df;border-radius:8px;background:#fff;padding:13px 16px}
+.performance-workspace .performance-details>summary,.performance-workspace .connection-options>summary,.integrations-workspace .connection-options>summary,.integrations-workspace .connection-advanced>summary,.integrations-workspace .integration-setup>summary{cursor:pointer;font-size:13px;color:#365f48;font-weight:500;line-height:1.6}
+.performance-workspace .performance-details>p{font-size:12px;line-height:1.8;color:#637765;margin:12px 0 0}
+.performance-workspace .similar-select label,.performance-workspace .similar-select select{font-size:13px;color:#526e58}
+.performance-workspace .inline-empty,.performance-workspace .live-info p{font-size:14px;color:#657967}
+.performance-workspace .live-info h3{font-size:23px;color:#2c5941}
+.performance-workspace .live-research-form>input,.performance-workspace .live-research-form>select{font-size:13px}
+.performance-workspace .publishing-tools>summary{font-size:13px;color:#476b51;padding:5px 0}
+.performance-workspace .native-performance,.integrations-workspace .native-connections{padding:22px}
+.performance-workspace .native-performance>.panel-head,.integrations-workspace .native-connections>.panel-head{padding:0 0 18px;align-items:center}
+.performance-workspace .native-performance>.connection-options,.integrations-workspace .native-connections>.connection-options{margin:0 0 18px;background:#f8faf7}
+.performance-workspace .native-disclosure,.integrations-workspace .native-disclosure{font-size:13px;line-height:1.7;background:#f2f6f1;color:#5a705e;margin-top:12px}
+.performance-workspace .native-filters{gap:12px;align-items:end}
+.performance-workspace .native-filters label{font-size:12px;font-weight:500;color:#526a59}
+.performance-workspace .native-filters input,.performance-workspace .native-filters select{font-size:13px;min-height:40px}
+.performance-workspace .native-performance>.table-wrap{margin-inline:-22px}
+.performance-workspace .native-performance .performance-empty{border:0;padding:32px 15px}
+.performance-workspace .native-comparison h3{font-size:17px}
+.integrations-workspace .native-connection-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.integrations-workspace .native-connection{padding:17px;border-radius:8px;gap:14px;background:#fff}
+.integrations-workspace .native-connection h3{font-size:17px;color:#2c4b38}
+.integrations-workspace .native-connection .tag{font-size:10px;line-height:1.5;padding:4px 7px}
+.integrations-workspace .native-connection p{font-size:12px;line-height:1.7;margin:10px 0;color:#5c7360}
+.integrations-workspace .native-connection summary{font-size:12px;font-weight:500;color:#3a6c4c}
+.integrations-workspace .native-connection>button{font-size:12px;width:100%;margin-top:auto;justify-content:center}
+.integrations-workspace .integration-grid{align-items:start}
+.integrations-workspace .integration-card{padding:24px}
+.integrations-workspace .integration-card h3{font-size:21px;margin-bottom:9px;color:#2a4b38}
+.integrations-workspace .integration-card>p,.integrations-workspace .integration-setup p{font-size:13px;line-height:1.7;color:#5d735f;margin:12px 0}
+.integrations-workspace .integration-icon{height:40px;width:40px;border-radius:10px;margin-bottom:17px;background:#f1f6ef;color:#5d8865}
+.integrations-workspace .connection-state{font-size:12px;color:#5b755d;margin:14px 0}
+.integrations-workspace .integration-setup{border-top:1px solid #e5ece1;margin-top:18px;padding-top:14px}
+.integrations-workspace .integration-setup code{font-size:12px;color:#3b5d42;overflow-wrap:anywhere}
+.integrations-workspace .integration-setup>.button{margin-top:10px}
+.integrations-workspace .plugin-options{margin:12px 0;padding:10px 0;border:0}
+.integrations-workspace .plugin-options>strong,.integrations-workspace .plugin-options summary{font-size:12px}
+.integrations-workspace .plugin-options p{font-size:12px;color:#617664}
+.integrations-workspace .integration-toggle{padding:14px 0;margin:18px 0}
+.integrations-workspace .integration-toggle strong{font-size:13px}
+.integrations-workspace .integration-toggle small{font-size:12px;color:#69806c}
+.integrations-workspace .connection-advanced>.integration-grid{margin-top:18px}
+.integrations-workspace .integration-privacy{font-size:12px;color:#627866;gap:10px;padding:0}
+.integrations-workspace .integration-privacy>svg{flex-shrink:0;margin-top:3px}
+@media(max-width:760px){
+  .performance-workspace .performance-intro{gap:15px}
+  .performance-workspace .performance-intro h2,.integrations-workspace .integration-intro h2{font-size:23px}
+  .performance-workspace .performance-intro-actions{width:100%;flex-wrap:wrap}
+  .performance-workspace .performance-intro-actions>.button{flex:1;min-width:130px}
+  .performance-workspace .performance-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .performance-workspace .performance-tabs>button:not(.performance-export){white-space:normal;padding:10px 8px;line-height:1.5;font-size:12px}
+  .performance-workspace .performance-tabs .performance-export{margin-left:0;justify-self:start}
+  .performance-workspace .performance-filter form{flex-basis:100%;min-width:0}
+  .performance-workspace .performance-filter label{gap:6px}
+  .performance-workspace .performance-filter label input{max-width:130px}
+  .performance-workspace .performance-source{flex-wrap:nowrap;gap:10px}
+  .performance-workspace .performance-source>div>span:last-child{display:none}
+  .performance-workspace .performance-kpis{gap:10px}
+  .performance-workspace .performance-kpi{padding:17px 13px}
+  .performance-workspace .performance-kpi>div{font-size:12px}
+  .performance-workspace .performance-kpi>strong{font-size:28px}
+  .performance-workspace .performance-empty{padding:29px 18px}
+  .performance-workspace .performance-empty>p{font-size:13px}
+  .performance-workspace .native-performance,.integrations-workspace .native-connections{padding:16px}
+  .performance-workspace .native-performance>.panel-head,.integrations-workspace .native-connections>.panel-head{align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .performance-workspace .native-performance>.table-wrap{margin-inline:-16px}
+  .integrations-workspace .native-connection-grid{grid-template-columns:1fr}
+  .integrations-workspace .integration-card{padding:21px}
+}

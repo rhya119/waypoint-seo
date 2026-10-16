@@ -3,7 +3,6 @@ import {
   ArrowDownToLine,
   ArrowRight,
   Bot,
-  Check,
   Code2,
   Plug,
   Radio,
@@ -40,47 +39,27 @@ export default function Integrations({
   return (
     <div className="integrations-workspace">
       <div className="integration-intro">
-        <span className="eyebrow">YOUR PLATFORM, YOUR WORKFLOW</span>
-        <h2>Connect only what you need.</h2>
-        <p>
-          Use Waypoint on its own, add data sources, or bring the whole toolkit
-          into Claude.
-        </p>
+        <h2>Connections</h2>
+        <p>Connect your accounts and choose how to use Claude.</p>
       </div>
       {error && (
         <p className="social-error" role="alert">
           {error}
         </p>
       )}
+      <NativeConnections />
       <div className="integration-grid">
         <section className="panel integration-card" data-tour="claude-plugin">
           <span className="integration-icon">
             <Plug size={25} />
           </span>
           <span className="tag">OPTIONAL</span>
-          <h3>Use your Claude subscription</h3>
+          <h3>Claude Code</h3>
           <p className="connection-state" data-claude-code-connected={Boolean(codeStatus?.loggedIn && codeStatus.authMethod === "claude.ai")}>{!codeStatus ? 'Checking local Claude Code…' : codeStatus.loggedIn && codeStatus.authMethod === 'claude.ai' ? `Claude Code signed in${codeStatus.subscription ? ` · ${codeStatus.subscription.toUpperCase()}` : ''}` : codeStatus.installed ? 'Claude Code installed · subscription sign-in required' : 'Install Claude Code and sign in with your subscription'}</p>
-          <p>On the host computer, open <code>Start-Claude-SEO.cmd</code> from the project folder. It uses your Claude Code subscription account and connects the local Waypoint tools. No separate Anthropic API key is needed for this route.</p>
-          <p>Ask: “Use Waypoint to analyze my imported SEO data for mydomain.com.” Claude can validate CSVs, import them when you request it, inspect actual metrics, compare domains and audit supplied HTML. Plan usage limits still apply.</p>
-          <p>
-            A Claude Code plugin for the whole platform: keyword research,
-            performance analysis, similar content, competitors, site audits,
-            backlinks, rank baselines, and reports.
-          </p>
-          <ul>
-            <li>
-              <Check size={14} />
-              Use real imported social metrics from Claude
-            </li>
-            <li>
-              <Check size={14} />
-              Preview CSVs and import them on your request
-            </li>
-            <li>
-              <Check size={14} />
-              No separate Anthropic API key required for MCP
-            </li>
-          </ul>
+          <p>Use your Claude subscription on this computer to work with Waypoint. No separate API key is required; plan limits apply.</p>
+          <details className="integration-setup">
+          <summary>Set up Claude Code</summary>
+          <p>On the host computer, open <code>Start-Claude-SEO.cmd</code> in the project folder. Ask: “Use Waypoint to analyze my SEO data for mydomain.com.”</p>
           <div className="plugin-options">
             <strong>Choose how to connect</strong>
             <details>
@@ -121,6 +100,7 @@ export default function Integrations({
             <ArrowDownToLine size={15} />
             Download plugin source bundle
           </a>
+          </details>
           <a
             className="text-button"
             href="https://github.com/rhya119/waypoint-seo/blob/main/docs/PLUGIN.md"
@@ -135,17 +115,14 @@ export default function Integrations({
             <Bot size={25} />
           </span>
           <span className={`tag ${data?.claude.enabled ? "" : "neutral"}`}>
-            {data?.claude.enabled ? "ENABLED" : "OFF BY DEFAULT"}
+            {data?.claude.enabled ? "ON" : "OFF"}
           </span>
-          <h3>Claude inside Waypoint</h3>
-          <p>
-            Optional AI interpretation within the dashboard. All research and
-            analysis tools work without enabling this.
-          </p>
+          <h3>Claude web advisor</h3>
+          <p>Optional advice inside Waypoint. Uses a separate Anthropic API key and may incur API charges.</p>
           <div className="integration-toggle">
             <div>
-              <strong>Show Claude analysis</strong>
-              <small>Opt in to AI actions across the platform</small>
+              <strong>Enable web advisor</strong>
+              <small>Each analysis requires a click</small>
             </div>
             <button
               role="switch"
@@ -186,6 +163,8 @@ export default function Integrations({
               ? "Server API key configured"
               : "No server API key configured"}
           </div>
+          <details className="integration-setup">
+          <summary>API setup and billing</summary>
           <p className="integration-help">
             To use the web advisor, set <code>ANTHROPIC_API_KEY</code> in the
             server’s ignored <code>.env</code> and restart. Model:{" "}
@@ -197,18 +176,21 @@ export default function Integrations({
             The Claude plugin/MCP connection and this API-powered advisor are
             independent options.
           </p>
+          </details>
         </section>
       </div>
-      <NativeConnections />
+      <details className="connection-advanced">
+      <summary>More data options</summary>
       <div className="integration-grid">
         <section className="panel integration-card compact">
           <span className="integration-icon">
             <Radio size={23} />
           </span>
-          <h3>YouTube native discovery</h3>
+          <h3>YouTube research</h3>
+          <p className="connection-state">{data?.youtube.configured ? 'API key configured' : 'API key needed'}</p>
           <p>
             Set <code>YOUTUBE_API_KEY</code> on the server and enable the
-            YouTube Data API for that key. The Live research tab searches
+            YouTube Data API for that key. The YouTube research tab searches
             matching videos and retrieves public lifetime views, likes,
             comments, and publication dates.
           </p>
@@ -222,7 +204,7 @@ export default function Integrations({
           <span className="integration-icon">
             <Code2 size={23} />
           </span>
-          <h3>Bring your own data pipeline</h3>
+          <h3>Import through the API</h3>
           <p>
             Send normalized daily observations from your authorized platform API
             workflow to <code>POST /api/social/ingest</code>. Use{" "}
@@ -237,12 +219,11 @@ export default function Integrations({
           </p>
         </section>
       </div>
+      </details>
       <div className="integration-privacy">
         <ShieldCheck size={18} />
         <p>
-          Provider keys stay on the server. Imported data stays in local SQLite.
-          The optional plugin exposes analysis tools plus explicit local CSV imports. It never posts
-          to social accounts.
+          Keys stay on the server. Data stays in your workspace. Pulls, imports and Claude requests run only when you choose them.
         </p>
       </div>
     </div>
