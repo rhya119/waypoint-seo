@@ -3,6 +3,7 @@ import type { WebReport } from '../shared/web-data';
 import type { GoogleSeoStatus } from '../shared/google-data';
 import type { TrafficEstimateStatus } from '../shared/traffic-estimates';
 import { api } from './lib';
+import GoogleConnect from './GoogleConnect';
 const date = (d: Date) => d.toISOString().slice(0,10);
 const fmt = (n: number | null | undefined) => n == null ? '—' : n.toLocaleString(undefined,{maximumFractionDigits:2});
 export default function TrafficOptions({ domain, report, refresh }: { domain: string; report: WebReport; refresh: () => void }) {
@@ -13,6 +14,12 @@ export default function TrafficOptions({ domain, report, refresh }: { domain: st
   const [from,setFrom] = useState(() => date(new Date(Date.UTC(new Date().getUTCFullYear(),new Date().getUTCMonth()-1,1))));
   const [to,setTo] = useState(() => date(new Date(Date.UTC(new Date().getUTCFullYear(),new Date().getUTCMonth(),0))));
   const validPeriod = !!from && !!to && from <= to;
+  const [open,setOpen] = useState(() => !report.google);
+  useEffect(() => {
+    const show = () => { setOpen(true); setTimeout(() => document.querySelector('[data-traffic-options]')?.scrollIntoView({ block: 'start' }), 120); };
+    window.addEventListener('waypoint-open-google', show);
+    return () => window.removeEventListener('waypoint-open-google', show);
+  }, []);
   useEffect(() => {let active=true; api<typeof status>('/web/connections').then(r=>{if(active)setStatus(r);}).catch(e=>{if(active)setError(e.message);}); return()=>{active=false;};},[]);
   useEffect(()=>{setError('');setNotice('');},[domain]);
   async function pull(kind: 'google'|'traffic-estimates') {
@@ -21,8 +28,8 @@ export default function TrafficOptions({ domain, report, refresh }: { domain: st
     try {await api(`/web/${kind}`,{domain,from,to});setNotice(`Saved ${kind==='google'?'Google data':'traffic estimates'} for ${domain}.`);refresh();} catch(e){setError((e as Error).message);} finally{setBusy('');}
   }
   return <section className="panel web-traffic" data-traffic-options="true">
-    <details className="web-traffic-connect">
-      <summary className="web-traffic-summary"><strong>Add traffic data</strong><span>Connect Google for a site you own</span></summary>
+    <details className="web-traffic-connect" open={open} onToggle={(event) => setOpen((event.target as HTMLDetailsElement).open)}>
+      <summary className="web-traffic-summary"><strong>{report.google ? 'Refresh Google data' : 'Connect Google Search Console'}</strong><span>{report.google ? `Last pulled ${new Date(report.google.collectedAt).toLocaleDateString()}` : 'Unlocks your real searches, clicks and quick-win keywords'}</span></summary>
       <div className="web-toolbar">
         <label>From <input aria-label="Traffic start date" type="date" value={from} max={to || undefined} onChange={e=>setFrom(e.target.value)} required/></label>
         <label>To <input aria-label="Traffic end date" type="date" value={to} min={from || undefined} onChange={e=>setTo(e.target.value)} required/></label>
@@ -33,13 +40,10 @@ export default function TrafficOptions({ domain, report, refresh }: { domain: st
           <span className="tag">YOUR WEBSITE · FREE GOOGLE DATA</span>
           <h3>Google search & traffic</h3>
           <p>See the searches bringing people to your site. Add Analytics to see visits and page views.</p>
-          <button className="button primary" disabled={!!busy || !status?.google.configured || !validPeriod} onClick={()=>void pull('google')}>{busy==='google'?'Pulling Google data…':'Pull Google data'}</button>
-          <p className="web-connection-state">{status ? status.google.configured ? 'Connection configured. Site access is checked when you pull.' : 'Connect your Google account on the host computer first.' : 'Checking connection…'}</p>
+          <GoogleConnect domain={domain} busy={busy === 'google'} canPull={validPeriod && !busy} onPull={() => void pull('google')} />
           <details>
-            <summary>Connection setup & data sources</summary>
-            <p>Search Console supplies query clicks, impressions and average positions. GA4 supplies sessions, users, page views and organic sessions for the configured site. These are authorized first-party measurements.</p>
-            <p>On the host computer, add GOOGLE_SEO_ACCESS_TOKEN to .env. For Analytics also set GA4_PROPERTY_ID and GA4_SITE_DOMAIN, then restart the private service. The token needs webmasters.readonly and analytics.readonly scopes and access to the requested property. Access tokens expire; replace them as needed.</p>
-            <a href="https://developers.google.com/webmaster-tools/v1/how-tos/authorizing" target="_blank" rel="noreferrer">Google authorization guide ↗</a>
+            <summary>What Waypoint reads</summary>
+            <p>Read-only access. Search Console supplies query clicks, impressions and average positions; Google Analytics supplies sessions, users, page views and organic sessions for the property you choose. The sign-in stays on this computer and renews itself; disconnect any time here or at myaccount.google.com/permissions.</p>
           </details>
         </article>
         <article>

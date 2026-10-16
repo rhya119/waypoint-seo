@@ -18,6 +18,7 @@ import { webDomain, trackInput } from '../shared/web-data.js';
 import { createClaudeCodeStatus } from './claude-code.js';
 import { createSiteScanner, SiteScanError } from './site-scan.js';
 import { createGoogleSeoProvider, GoogleSeoError, type GoogleSeoProvider } from './google-data.js';
+import { createGoogleOAuth, loopbackRedirect, ga4Choice, setGa4Choice, type GoogleOAuth } from './google-oauth.js';
 import { googleSeoInput } from '../shared/google-data.js';
 import { createTrafficEstimateProvider, TrafficEstimateError, type TrafficEstimateProvider } from './traffic-estimates.js';
 import { trafficEstimateInput } from '../shared/traffic-estimates.js';
@@ -31,7 +32,7 @@ export function normalizeDomain(value: string): string {
 const domainSchema = z.string().trim().max(253).transform((value, ctx) => {
   try { return normalizeDomain(value); } catch { ctx.addIssue({ code: 'custom', message: 'Enter a valid HTTP(S) domain.' }); return z.NEVER; }
 });
-export type AppOptions = { privateOrigin?: string; scanner?: ReturnType<typeof createSiteScanner>; google?: GoogleSeoProvider; trafficEstimates?: TrafficEstimateProvider; pageSpeed?: PageSpeedProvider; keywordIdeas?: KeywordIdeasProvider };
+export type AppOptions = { privateOrigin?: string; scanner?: ReturnType<typeof createSiteScanner>; google?: Pick<GoogleSeoProvider, 'status' | 'pull'> & Partial<Pick<GoogleSeoProvider, 'properties'>>; googleOAuth?: GoogleOAuth; trafficEstimates?: TrafficEstimateProvider; pageSpeed?: PageSpeedProvider; keywordIdeas?: KeywordIdeasProvider };
 export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider, claude: ClaudeService = createClaudeService(), youtube: YouTubeProvider = createYouTubeProvider(), connectors: SocialConnectors = createSocialConnectors(), options: AppOptions = {}) {
   let privateOrigin = '';
   if (options.privateOrigin) { const origin = new URL(options.privateOrigin); if (origin.protocol !== 'https:' || !origin.hostname.endsWith('.ts.net') || origin.username || origin.password || origin.port || origin.pathname !== '/' || origin.search || origin.hash) throw new Error('Private origin must be an HTTPS Tailscale .ts.net origin.'); privateOrigin = origin.origin; }
@@ -46,6 +47,7 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   const claudeCodeStatus = createClaudeCodeStatus();
   const scanner = options.scanner || createSiteScanner();
   const google = options.google || createGoogleSeoProvider();
+  const googleOAuth = options.googleOAuth || createGoogleOAuth(db);
   const trafficEstimates = options.trafficEstimates || createTrafficEstimateProvider();
   const pageSpeed = options.pageSpeed || createPageSpeedProvider();
   const keywordIdeas = options.keywordIdeas || createKeywordIdeas();
@@ -67,6 +69,30 @@ export function createApp(db: DatabaseSync, provider: SeoProvider = demoProvider
   app.get('/api/health', (_req, res) => res.json({ status: 'ok', mode: 'public-scan-and-source-data', legacyProvider: provider.mode }));
   app.get('/api/web/domains', (_req, res) => res.json(webDomains(db)));
   app.get('/api/web/report', (req, res) => res.json(webReport(db, webDomain.parse(req.query.domain), req.query.datasetId ? z.coerce.number().int().positive().parse(req.query.datasetId) : undefined)));
+  // Google sign-in runs only on the host computer: a Desktop OAuth client redirects to loopback.
+  app.get('/api/google/oauth/status', (req, res) => res.json({ ...googleOAuth.status(), canSignInHere: Boolean(loopbackRedirect(req.get('host'))) }));
+  app.get('/api/google/oauth/start', (req, res) => {
+    const redirectUri = loopbackRedirect(req.get('host'));
+    if (!redirectUri) { res.status(400).json({ error: 'Sign in with Google on the host computer (http://127.0.0.1), not over the private network.' }); return; }
+    res.redirect(302, googleOAuth.start(redirectUri));
+  });
+  app.get('/api/google/oauth/callback', async (req, res) => {
+    try { await googleOAuth.callback(req.query); res.redirect(302, '/#domain-overview'); }
+    catch (error) {
+      const message = (error instanceof GoogleSeoError ? error.message : 'Google sign-in failed.').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      res.status(error instanceof GoogleSeoError ? error.status : 500).type('html').send(`<!doctype html><meta charset="utf-8"><title>Google sign-in</title><body style="font-family:system-ui;max-width:520px;margin:80px auto;color:#203b32"><h1>Google sign-in did not finish</h1><p>${message}</p><p><a href="/#domain-overview">Back to Waypoint</a></p>`);
+    }
+  });
+  app.post('/api/google/oauth/disconnect', async (_req, res) => res.json(await googleOAuth.disconnect()));
+  app.get('/api/google/properties', async (req, res) => {
+    if (!google.properties) { res.status(503).json({ error: 'Google properties are unavailable.' }); return; }
+    const domain = req.query.domain ? webDomain.parse(req.query.domain) : null;
+    res.json({ ...(await google.properties()), ga4: domain ? ga4Choice(db, domain) : null });
+  });
+  app.put('/api/google/ga4', (req, res) => {
+    const input = z.object({ domain: webDomain, propertyId: z.string().regex(/^[1-9]\d{0,24}$/).nullable() }).parse(req.body);
+    res.json({ domain: input.domain, propertyId: setGa4Choice(db, input.domain, input.propertyId) });
+  });
   app.get('/api/web/connections', (_req, res) => res.json({ google: google.status(), trafficEstimates: trafficEstimates.status(), pageSpeed: pageSpeed.status() }));
   app.post('/api/web/scan', async (req, res) => { const { domain } = z.object({ domain: webDomain }).parse(req.body); res.json(saveSiteScan(db, await scanner.scan(domain), domain)); });
   app.post('/api/web/google', async (req, res) => { const input = googleSeoInput.parse(req.body); res.json(saveGoogleData(db, await google.pull(input.domain, input.from, input.to), input)); });

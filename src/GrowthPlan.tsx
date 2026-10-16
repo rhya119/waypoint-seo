@@ -88,9 +88,9 @@ export function buildGrowthPlan(report: WebReport): Action[] {
   add(!!speed && speed.score !== null && speed.score < 90 && { id: 'speed-real', title: speed.score < 50 ? 'Fix your slow mobile pages' : 'Speed up your mobile pages', impact: speed.score < 50 ? 'High' : 'Medium', effort: 'Half day', href: '#site-audit', tool: 'Site health', score: speed.score < 50 ? 81 : 52,
     why: `Google scored your homepage ${speed.score}/100 on mobile${speed.field?.lcpMs ? `; real visitors wait ${(speed.field.lcpMs / 1000).toFixed(1)} s for the main content` : speed.lab.lcpMs ? `; the main content appears after ${(speed.lab.lcpMs / 1000).toFixed(1)} s` : ''}. Slow pages lose visitors and rankings.`,
     steps: speed.opportunities.length ? speed.opportunities.slice(0, 3).map(item => item.title) : ['Compress large images and serve WebP.', 'Defer non-essential scripts.'] });
-  add(!report.search && { id: 'connect', title: 'Connect Search Console to see the searches that reach you', impact: 'High', effort: '15 min', href: '#integrations', tool: 'Connections', score: 75,
+  add(!report.search && { id: 'connect', title: 'Connect Search Console to see the searches that reach you', impact: 'High', effort: '15 min', href: '#domain-overview', tool: 'Google connection', score: 75,
     why: 'Without query data, Waypoint can only check your pages. Search Console shows which searches show your site and which ones to grow.',
-    steps: ['Verify your site in Google Search Console if you have not already.', 'Export Performance → Queries as CSV, or connect Google under Connections.', 'Import it here — your plan updates with keyword-specific actions.'] });
+    steps: ['Verify your site in Google Search Console if you have not already.', 'Click “Sign in with Google” below (first time: follow the 5-minute setup shown there).', 'Click Pull Google data — your plan updates with keyword-specific actions.'] });
   add(failed('Meta description') && !(missingDescriptions.length > 1) && { id: 'description', title: 'Write a meta description that sells the click', impact: 'Medium', effort: '15 min', href: '#site-audit', tool: 'Site health', score: 70,
     why: site?.description ? `The description is ${site.description.length} characters; aim for 50–165.` : 'Without a description Google picks random page text for your search snippet.',
     steps: ['Summarise the page in one or two sentences with your main keyword.', 'End with a reason to click, such as free shipping or a quick answer.'] });
@@ -167,7 +167,7 @@ export default function GrowthPlan({ report }: { report: WebReport }) {
             <div className="growth-body">
               <p>{action.why}</p>
               <ol>{action.steps.map(step => <li key={step}>{step}</li>)}</ol>
-              <a className="text-button" href={action.href} onClick={() => { const tab = action.tab || (action.href === '#site-audit' ? (/ai-|llms|faq|schema/.test(action.id) ? 'ai' : /speed/.test(action.id) ? 'speed' : 'issues') : undefined); if (tab) openHealthTab(tab); }}>Open {action.tool} <ChevronRight size={14} /></a>
+              <a className="text-button" href={action.href} onClick={(event) => { if (action.id === 'connect') { event.preventDefault(); window.dispatchEvent(new Event('waypoint-open-google')); return; } const tab = action.tab || (action.href === '#site-audit' ? (/ai-|llms|faq|schema/.test(action.id) ? 'ai' : /speed/.test(action.id) ? 'speed' : 'issues') : undefined); if (tab) openHealthTab(tab); }}>Open {action.tool} <ChevronRight size={14} /></a>
             </div>
           </details>
         </li>;
