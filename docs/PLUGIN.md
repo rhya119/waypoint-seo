@@ -4,7 +4,7 @@ Waypoint runs as a standalone dashboard, a direct MCP connector or a Claude Code
 
 ## Choose a connection style
 
-The **Claude Code plugin** bundles three workflow skills and one local MCP server with **21 tools**. From an authenticated clone:
+The **Claude Code plugin** bundles three workflow skills and one local MCP server with **24 tools**. From an authenticated clone:
 
 ```powershell
 npm ci
@@ -33,7 +33,7 @@ Read tools open SQLite read-only. Missing databases return empty data rather tha
 
 No provider credentials are required for local analysis or public website scanning. Use `website_scan` for explicit robots-aware HTTPS inspection of a homepage and up to two eligible internal pages, with private-address, redirect, byte and timeout restrictions. Scanned topics/outbound links are not rankings, search volume or inbound backlinks. YouTube discovery needs `YOUTUBE_API_KEY` only for an explicit call; it uses fixed Google endpoints and consumes quota. Native social account pulls remain explicit app actions. The plugin reads their saved snapshots without initiating sync or returning tokens.
 
-## All 21 tools
+## All 24 tools
 
 | Area | Tools | Data boundary |
 | --- | --- | --- |

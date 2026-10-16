@@ -64,7 +64,8 @@ async function boundedJson(response: Response): Promise<Record<string, unknown>>
   return parsed as Record<string, unknown>;
 }
 
-export function createGoogleSeoProvider(options: { accessToken?: string; ga4PropertyId?: string; ga4Domain?: string; fetch?: typeof fetch } = {}) {
+type SignIn = { connected: () => boolean; accessToken: () => Promise<string | null>; ga4For?: (domain: string) => string | null };
+export function createGoogleSeoProvider(options: { accessToken?: string; ga4PropertyId?: string; ga4Domain?: string; fetch?: typeof fetch; signIn?: SignIn } = {}) {
   const rawToken = options.accessToken?.trim();
   const token = rawToken && rawToken.length <= 16000 && !/[\r\n]/.test(rawToken) ? rawToken : undefined;
   const rawProperty = options.ga4PropertyId?.trim();
@@ -73,10 +74,12 @@ export function createGoogleSeoProvider(options: { accessToken?: string; ga4Prop
   const fetcher = options.fetch || fetch;
   let active = false;
   let lastRequest: number | null = null;
+  let bearer = token || '';
+  const signedIn = () => !token && Boolean(options.signIn?.connected());
 
   async function request(url: string, deadline: number, provider: 'Search Console' | 'GA4', body?: unknown) {
     const parsed = new URL(url);
-    if (!['https://www.googleapis.com', 'https://analyticsdata.googleapis.com'].includes(parsed.origin) || parsed.search || parsed.username || parsed.password) throw new GoogleSeoError(500, 'Unsupported Google API endpoint.');
+    if (!['https://www.googleapis.com', 'https://analyticsdata.googleapis.com', 'https://analyticsadmin.googleapis.com'].includes(parsed.origin) || parsed.search || parsed.username || parsed.password) throw new GoogleSeoError(500, 'Unsupported Google API endpoint.');
     const duration = Math.min(12000, deadline - Date.now());
     if (duration <= 0) throw new GoogleSeoError(504, 'Google connector reached its overall time limit.');
     const controller = new AbortController();
@@ -88,14 +91,14 @@ export function createGoogleSeoProvider(options: { accessToken?: string; ga4Prop
       return await Promise.race([(async () => {
         const response = await fetcher(url, {
           method: body === undefined ? 'GET' : 'POST',
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+          headers: { Authorization: `Bearer ${bearer}`, Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
           signal: controller.signal,
           redirect: 'error',
         });
         if (!response.ok) {
           await response.body?.cancel().catch(() => {});
-          if (response.status === 401) throw new GoogleSeoError(401, `${provider} rejected the Google access token. Renew GOOGLE_SEO_ACCESS_TOKEN and restart the server.`);
+          if (response.status === 401) throw new GoogleSeoError(401, signedIn() ? `${provider} rejected the Google sign-in. Disconnect and sign in with Google again.` : `${provider} rejected the Google access token. Renew GOOGLE_SEO_ACCESS_TOKEN and restart the server.`);
           if (response.status === 403) throw new GoogleSeoError(403, `${provider} denied access. Check the account's property permissions, enabled API and read-only OAuth scope.`);
           if (response.status === 429) throw new GoogleSeoError(429, `${provider} quota or rate limit reached. No automatic retry was attempted.`);
           throw new GoogleSeoError(502, `${provider} could not return this report. Check API configuration and availability.`);
@@ -172,9 +175,10 @@ export function createGoogleSeoProvider(options: { accessToken?: string; ga4Prop
   }
 
   async function analytics(domain: string, from: string, to: string, deadline: number, warnings: string[]): Promise<GoogleSeoResult['analytics']> {
-    if (!propertyId || !ga4Domain) { warnings.push('GA4 is not configured: set numeric GA4_PROPERTY_ID and matching GA4_SITE_DOMAIN to enable analytics.'); return null; }
-    if (ga4Domain !== domain) { warnings.push('GA4_SITE_DOMAIN does not match the requested domain; no analytics request was sent.'); return null; }
-    const endpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`;
+    const chosen = options.signIn?.ga4For?.(domain);
+    const selected = chosen && /^[1-9]\d{0,24}$/.test(chosen) ? chosen : propertyId && ga4Domain === domain ? propertyId : null;
+    if (!selected) { warnings.push(propertyId && ga4Domain && ga4Domain !== domain ? 'GA4_SITE_DOMAIN does not match the requested domain; no analytics request was sent.' : 'No Google Analytics property is chosen for this domain. Pick one under Add traffic data to include visits.'); return null; }
+    const endpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${selected}:runReport`;
     const hostname = { filter: { fieldName: 'hostName', inListFilter: { values: [domain, `www.${domain}`], caseSensitive: false } } };
     const common = { dateRanges: [{ startDate: from, endDate: to }], keepEmptyRows: true, limit: '1' };
     const totals = metricValues(await request(endpoint, deadline, 'GA4', {
@@ -191,17 +195,32 @@ export function createGoogleSeoProvider(options: { accessToken?: string; ga4Prop
       warnings.push(error instanceof GoogleSeoError ? `Organic sessions unavailable: ${error.message}` : 'Organic sessions unavailable.');
     }
     warnings.push('GA4 uses the configured property and its reporting timezone, filtered to the requested host and www equivalent. GA4_SITE_DOMAIN is a local mapping, not proof that every property stream belongs to that host.');
-    return { propertyId, sessions: totals.sessions, activeUsers: totals.activeUsers, screenPageViews: totals.screenPageViews, organicSessions };
+    return { propertyId: selected, sessions: totals.sessions, activeUsers: totals.activeUsers, screenPageViews: totals.screenPageViews, organicSessions };
   }
 
   return {
+    /** Search Console sites and GA4 properties the signed-in account can read, for pickers. */
+    async properties() {
+      bearer = token || await options.signIn?.accessToken() || '';
+      if (!bearer) throw new GoogleSeoError(503, 'Sign in with Google first.');
+      const deadline = Date.now() + 25000;
+      const sites = await request('https://www.googleapis.com/webmasters/v3/sites', deadline, 'Search Console');
+      const searchConsole = (Array.isArray(sites.siteEntry) ? sites.siteEntry : []).map(record).filter((entry) => typeof entry.siteUrl === 'string').map((entry) => ({ property: String(entry.siteUrl).slice(0, 300), permission: String(entry.permissionLevel || '') })).slice(0, 500);
+      let analytics: { propertyId: string; name: string; account: string }[] = [];
+      try {
+        const summaries = await request('https://analyticsadmin.googleapis.com/v1beta/accountSummaries', deadline, 'GA4');
+        analytics = (Array.isArray(summaries.accountSummaries) ? summaries.accountSummaries : []).map(record).flatMap((account) => (Array.isArray(account.propertySummaries) ? account.propertySummaries : []).map(record).map((property) => ({ propertyId: String(property.property || '').replace(/^properties\//, ''), name: String(property.displayName || '').slice(0, 200), account: String(account.displayName || '').slice(0, 200) }))).filter((property) => /^[1-9]\d{0,24}$/.test(property.propertyId)).slice(0, 500);
+      } catch (error) { if (!(error instanceof GoogleSeoError) || ![403, 429, 502, 504].includes(error.status)) throw error; }
+      return { searchConsole, analytics };
+    },
     status(): GoogleSeoStatus {
-      const missingEnv = token ? [] : ['GOOGLE_SEO_ACCESS_TOKEN'];
+      const viaSignIn = signedIn();
+      const missingEnv = token || viaSignIn ? [] : ['GOOGLE_SEO_ACCESS_TOKEN'];
       const analyticsMissing = [...missingEnv, ...(!propertyId ? ['GA4_PROPERTY_ID'] : []), ...(!ga4Domain ? ['GA4_SITE_DOMAIN'] : [])];
       return {
-        provider: 'google-first-party', configured: Boolean(token), requiredEnv: ['GOOGLE_SEO_ACCESS_TOKEN'], missingEnv,
-        searchConsole: { configured: Boolean(token), requiredEnv: ['GOOGLE_SEO_ACCESS_TOKEN'] },
-        analytics: { configured: Boolean(token && propertyId && ga4Domain), requiredEnv: ['GOOGLE_SEO_ACCESS_TOKEN', 'GA4_PROPERTY_ID', 'GA4_SITE_DOMAIN'], missingEnv: analyticsMissing },
+        provider: 'google-first-party', configured: Boolean(token) || viaSignIn, requiredEnv: ['GOOGLE_SEO_ACCESS_TOKEN'], missingEnv,
+        searchConsole: { configured: Boolean(token) || viaSignIn, requiredEnv: ['GOOGLE_SEO_ACCESS_TOKEN'] },
+        analytics: { configured: Boolean(token && propertyId && ga4Domain) || viaSignIn, requiredEnv: ['GOOGLE_SEO_ACCESS_TOKEN', 'GA4_PROPERTY_ID', 'GA4_SITE_DOMAIN'], missingEnv: analyticsMissing },
         scopes: [...SCOPES],
         notes: ['Configuration flags indicate valid local settings, not successful authorization. Use your own OAuth access token with read-only scopes and authorized properties.', 'Tokens can expire. This connector performs explicit reads only, without OAuth login, token refresh or automatic retries.'],
       };
@@ -210,7 +229,8 @@ export function createGoogleSeoProvider(options: { accessToken?: string; ga4Prop
       let input: z.infer<typeof googleSeoInput>;
       try { input = googleSeoInput.parse({ domain, from, to }); }
       catch { throw new GoogleSeoError(400, 'Supply a valid domain and YYYY-MM-DD date range with start before end.'); }
-      if (!token) throw new GoogleSeoError(503, 'Configure GOOGLE_SEO_ACCESS_TOKEN with authorized read-only Google access and restart the server.');
+      bearer = token || await options.signIn?.accessToken() || '';
+      if (!bearer) throw new GoogleSeoError(503, 'Sign in with Google under Add traffic data (or set GOOGLE_SEO_ACCESS_TOKEN) first.');
       if (active || lastRequest !== null && Date.now() - lastRequest < 10000) throw new GoogleSeoError(429, 'Wait ten seconds before another Google SEO pull.');
       active = true;
       lastRequest = Date.now();

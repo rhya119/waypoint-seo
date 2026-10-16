@@ -18,6 +18,9 @@ import {
 import type { Audit } from "../shared/types";
 import SiteResults from './SiteResults';
 import TrafficOptions from './TrafficOptions';
+import GrowthPlan from './GrowthPlan';
+import SiteHealth from './SiteHealth';
+import { KeywordIdeas, Opportunities } from './KeywordTools';
 import "./web-workspace.css";
 const fmt = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -161,14 +164,7 @@ export default function WebWorkspace({
   return (
     <div className="web-workspace">
       <section className="panel web-setup" data-tour="own-domain">
-        <div>
-          <span className="eyebrow">PUBLIC SCAN · CONNECTED DATA · IMPORTS</span>
-          <h2>Start with a website.</h2>
-          <p>
-            Enter a domain to scan its public pages and find SEO issues.
-            Connect traffic data or import your exports to add measured search performance.
-          </p>
-        </div>
+        <div className="web-analyze-label"><h2>Analyze a website</h2><span>Public SEO scan</span></div>
         <form
           className="web-domain-form"
           onSubmit={(e) => {
@@ -176,9 +172,12 @@ export default function WebWorkspace({
             void run(async () => {
               const value = normalizeWebDomain(input.trim());
               onDomain(value);
-              setNotice('Scanning public pages and checking their markup…');
-              await api('/web/scan', {domain:value});
-              setNotice(`Public scan saved for ${value}. Traffic data can be added using either option below.`);
+              const started = Date.now();
+              const tick = () => setNotice(`Crawling up to 50 pages of ${value}, checking SEO and AI search readiness… ${Math.round((Date.now() - started) / 1000)}s (usually 10–30s)`);
+              tick();
+              const timer = setInterval(tick, 1000);
+              try { await api('/web/scan', {domain:value}); } finally { clearInterval(timer); }
+              setNotice(`Scan saved for ${value}.`);
               setRefresh(v => v + 1);
             });
           }}
@@ -188,18 +187,26 @@ export default function WebWorkspace({
             aria-label="Your website domain"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Your website domain or URL"
+            placeholder="e.g. yoursite.com or paste any page URL"
             required
             maxLength={253}
+            autoFocus={!domain}
+            inputMode="url"
+            autoCapitalize="none"
+            spellCheck={false}
           />
+          {input && <button type="button" className="icon-button" aria-label="Clear website" onClick={() => setInput('')}><X size={16} /></button>}
           <button className="button primary" disabled={busy}>{busy ? 'Working…' : 'Analyze website'}</button>
         </form>
+        {domains.length > 1 && <div className="web-recent" aria-label="Recent websites"><span>Recent:</span>{domains.slice(0, 5).map(d => <button type="button" key={d} className={d === domain ? 'active' : ''} aria-pressed={d === domain} disabled={busy} onClick={() => { setInput(d); onDomain(d); setNotice(''); }}>{d}</button>)}</div>}
+        <details className="web-advanced" data-web-advanced="true"><summary>Import data and more options</summary>
         {!!domains.length && (
           <label>
             Saved domains
             <select
               aria-label="Saved domains"
               value={domains.includes(domain) ? domain : ""}
+              disabled={busy}
               onChange={(e) => {
                 if (e.target.value) onDomain(e.target.value);
               }}
@@ -228,6 +235,7 @@ export default function WebWorkspace({
             Use my Claude plan through Claude Code ↗
           </button>
         </div>
+        </details>
       </section>
       {error && (
         <p className="social-error" role="alert">
@@ -244,10 +252,7 @@ export default function WebWorkspace({
           <div className="panel-head">
             <div>
               <h2>Import your SEO data</h2>
-              <p>
-                Preview first. A matching domain/type/window/scope replaces its
-                previous dataset; different windows stay separate.
-              </p>
+              <p>Choose a file or paste CSV, then validate and import.</p>
             </div>
             <button
               className="icon-button"
@@ -338,13 +343,13 @@ export default function WebWorkspace({
                 />
               </label>
             </div>
-            <p className="web-help">
+            <details className="web-details"><summary>CSV format and import help</summary><p className="web-help">
               {kind === "search"
                 ? "Search Console → Performance → Search results → select date range and filters → Queries → Export CSV. Open the Queries CSV from the downloaded export. English “Top queries,Clicks,Impressions,CTR,Position” headers are accepted. Choose the same range/scope above. These are query-table totals, not whole-site traffic or global search volume."
                 : kind === "backlinks"
                   ? "Use source_url,target_url,anchor,rel. Each target must belong to this domain. This inspects your supplied link list; it does not discover or verify live backlinks."
                   : "Use keyword,date,position,country,device,url. Positions are actual manually observed integer ranks. Country defaults to all; device is all/desktop/mobile/tablet. No automated Google scraping occurs."}
-            </p>
+            </p><p className="web-help">A matching domain, type, date range and scope replaces its previous dataset. Different windows stay separate.</p></details>
             <div className="web-toolbar">
               <label className="button secondary">
                 Upload CSV
@@ -434,20 +439,28 @@ export default function WebWorkspace({
         <section className="panel web-empty">
           <Globe2 size={35} />
           <h3>Enter your website above to get started.</h3>
-          <p>
-            Use any valid domain. Your projects start without invented metrics.
-            You can also import a dataset and its domain will be selected
-            automatically.
-          </p>
+          <p>Analyze its public pages, then follow the findings to your next task.</p>
         </section>
       ) : !report && !error ? (
         <p role="status">Loading your saved data…</p>
       ) : (
         report && (
           <>
-            <div className="web-source">
-              <strong>{domain}</strong>
-              <span className="tag">{report.site ? 'Public scan + source data' : 'Saved source data'}</span>
+            {page === 6 && <section className="panel web-report-actions">
+              <div><h2>Your SEO report</h2><p>{domain} · saved findings and source details</p></div>
+              <div className="web-toolbar">
+                <button className="button primary" onClick={() => download(`waypoint-${domain}-measured.json`, JSON.stringify({ generatedAt: new Date().toISOString(), report }, null, 2), 'application/json')}><ArrowDownToLine size={15} />Export measured report</button>
+                <button className="button secondary" onClick={() => window.print()}>Print / save PDF</button>
+              </div>
+            </section>}
+            {page === 0 && <GrowthPlan report={report} />}
+            <SiteResults key={domain} site={report.site} page={page} comparisons={report.publicComparisons} refresh={() => setRefresh(v => v + 1)} history={report.scanHistory} pageSpeed={report.pageSpeed} />
+            {page === 3 && report.site && <SiteHealth key={domain} site={report.site} report={report} refresh={() => setRefresh(v => v + 1)} />}
+            {page === 1 && <KeywordIdeas key={domain} report={report} refresh={() => setRefresh(v => v + 1)} />}
+            {page === 1 && <Opportunities report={report} />}
+            {report.search && [1,5,6].includes(page) && <details className="web-data-source">
+              <summary>Search data · {report.search.from} – {report.search.to}</summary>
+              <div className="web-source">
               {report.search && (
                 <label>
                   Query dataset
@@ -466,18 +479,18 @@ export default function WebWorkspace({
                   </select>
                 </label>
               )}
-            </div>
-            <SiteResults site={report.site} page={page} comparisons={report.publicComparisons} refresh={() => setRefresh(v => v + 1)} />
-            {(page === 0 || page === 6) && <TrafficOptions key={domain} domain={domain} report={report} refresh={() => {setDatasetId("");setRefresh(v => v + 1);}} />}
-            {(page === 0 || page === 6) && (
+              <p>{report.search.source} · {report.search.scope}. Query subset only.</p>
+              </div>
+            </details>}
+            {(page === 0 || page === 6) && report.search && (
               <section className="panel">
                 <div className="panel-head">
                   <div>
                     <h2>
-                      {page === 0 ? "Domain overview" : "Your SEO report"}
+                      Search performance
                     </h2>
                     <p>
-                      Source-backed query coverage, supplied backlinks and observed ranks.
+                      {report.search.from} – {report.search.to} · returned query subset
                     </p>
                   </div>
                 </div>
@@ -487,8 +500,6 @@ export default function WebWorkspace({
                     ["Query impressions", report.totals.impressions],
                     ["Query CTR %", report.totals.ctr],
                     ["Reported queries", report.totals.queries],
-                    ["Supplied backlinks", report.totals.backlinks],
-                    ["Referring hosts", report.totals.referringHosts],
                   ].map(([label, value]) => (
                     <div key={label as string}>
                       <small>{label}</small>
@@ -496,39 +507,16 @@ export default function WebWorkspace({
                     </div>
                   ))}
                 </div>
-                <p className="web-help">
-                  {report.search
-                    ? `Query source: ${report.search.source} · ${report.search.from} to ${report.search.to} · ${report.search.scope}.`
-                    : "Import your Search Console query export to populate search metrics."}{" "}
-                  {report.backlinks
-                    ? `Link snapshot: ${report.backlinks.from} to ${report.backlinks.to}.`
-                    : "No backlink list imported."}
-                </p>
-                <div className="web-toolbar">
-                  <button
-                    className="button secondary"
-                    onClick={() => openImport("search")}
-                  >
-                    Import queries
-                  </button>
-                  <button
-                    className="button secondary"
-                    onClick={() => openImport("backlinks")}
-                  >
-                    Import backlinks
-                  </button>
-                </div>
+                <p className="web-source-note">{report.search.source}. Query clicks and impressions are separate from site visits. <a href="#keyword-research">Explore queries →</a></p>
               </section>
             )}
-            {(page === 0 || page === 1 || page === 6) && (
+            {page === 1 && (
               <section className="panel">
                 <div className="panel-head">
                   <div>
                     <h2>Keyword performance</h2>
                     <p>
-                      Actual query clicks, impressions, CTR and Search
-                      Console average position. Global volume, CPC and
-                      difficulty are unavailable.
+                      Search queries from your connected data or imports.
                     </p>
                   </div>
                   <button
@@ -564,10 +552,13 @@ export default function WebWorkspace({
                   <Search size={16} />
                   <input
                     aria-label="Filter measured keywords"
-                    placeholder="Find any keyword in your imported data"
+                    placeholder="Search your queries, e.g. batik dress"
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
+                    type="search"
                   />
+                  {term && <button type="button" className="icon-button" aria-label="Clear query search" onClick={() => setTerm('')}><X size={15} /></button>}
+                  {!!report.queries.length && <small className="web-search-count">{rows.length} of {report.queries.length}</small>}
                 </label>
                 {rows.length ? (
                   <div className="table-wrap">
@@ -599,11 +590,10 @@ export default function WebWorkspace({
                     <h3>
                       {report.search
                         ? "No queries match this filter."
-                        : "Import query data to research your keywords."}
+                        : "Add search data to see keyword performance."}
                     </h3>
                     <p>
-                      You can explore every query present in your export. A new
-                      phrase with no observations remains unknown.
+                      Connect Google below or import a Search Console export.
                     </p>
                     <button
                       className="button secondary"
@@ -621,14 +611,14 @@ export default function WebWorkspace({
                 )}
               </section>
             )}
-            {(page === 2 || page === 6) && (
-              <section className="panel">
+            {page === 2 && (
+              <details className="panel web-secondary-tool">
+                <summary>Imported backlinks {report.totals.backlinks === null ? '' : `(${fmt(report.totals.backlinks)})`}</summary>
                 <div className="panel-head">
                   <div>
-                    <h2>Backlink analysis</h2>
+                    <h2>Inbound links from your records</h2>
                     <p>
-                      Analyze the URLs, anchors and rel attributes you supplied.
-                      No link authority scores are invented.
+                      Source URLs, targets and anchors from your supplied list.
                     </p>
                   </div>
                   <button
@@ -678,10 +668,11 @@ export default function WebWorkspace({
                     </p>
                   </div>
                 )}
-              </section>
+              </details>
             )}
             {page === 3 && (
-              <section className="panel">
+              <details className="panel web-secondary-tool" data-manual-audit="true">
+                <summary>Audit pasted or uploaded HTML</summary>
                 <div className="panel-head">
                   <div>
                     <h2>Audit your actual page HTML</h2>
@@ -755,16 +746,15 @@ export default function WebWorkspace({
                     ))}
                   </div>
                 )}
-              </section>
+              </details>
             )}
-            {(page === 4 || page === 6) && (
+            {page === 4 && (
               <section className="panel">
                 <div className="panel-head">
                   <div>
                     <h2>Observed rank tracking</h2>
                     <p>
-                      Import dated manual observations. Search Console average
-                      positions stay in the query table.
+                      Save a keyword, then import actual dated positions.
                     </p>
                   </div>
                   <button
@@ -876,15 +866,14 @@ export default function WebWorkspace({
                 )}
               </section>
             )}
-            {(page === 5 || page === 6) && (
-              <section className="panel">
+            {page === 5 && (
+              <details className="panel web-secondary-tool">
+                <summary>Compare authorized query datasets</summary>
                 <div className="panel-head">
                   <div>
                     <h2>Compare supplied domain datasets</h2>
                     <p>
-                      Compare query overlap and gaps between authorized
-                      datasets. Matching dates and declared filters are required
-                      for a comparable result.
+                      Query overlap requires matching dates and coverage.
                     </p>
                   </div>
                   <button
@@ -938,49 +927,10 @@ export default function WebWorkspace({
                     </p>
                   </div>
                 )}
-              </section>
+              </details>
             )}
-            {page === 6 && (
-              <section className="panel web-report-actions">
-                <h2>Export your report</h2>
-                <p>
-                  Includes source dates, coverage limitations, supplied links,
-                  observed positions and the latest saved markup audit.
-                </p>
-                <div className="web-toolbar">
-                  <button
-                    className="button primary"
-                    onClick={() =>
-                      download(
-                        `waypoint-${domain}-measured.json`,
-                        JSON.stringify(
-                          { generatedAt: new Date().toISOString(), report },
-                          null,
-                          2,
-                        ),
-                        "application/json",
-                      )
-                    }
-                  >
-                    <ArrowDownToLine size={15} />
-                    Export measured report
-                  </button>
-                  <button
-                    className="button secondary"
-                    onClick={() => window.print()}
-                  >
-                    Print / save PDF
-                  </button>
-                </div>
-                {report.audit && (
-                  <p>
-                    Latest markup audit: {report.audit.score}/100 at{" "}
-                    {new Date(report.audit.checkedAt).toLocaleString()}.
-                  </p>
-                )}
-              </section>
-            )}
-            <p className="web-disclosure">{report.disclosure}</p>
+            {[0,1,6].includes(page) && <TrafficOptions key={domain} domain={domain} report={report} refresh={() => {setDatasetId('');setRefresh(v => v + 1);}} />}
+            <details className="web-data-source"><summary>Data sources and limitations</summary><p>{report.disclosure}</p>{report.backlinks && <p>Supplied backlinks: {fmt(report.totals.backlinks)} · {report.backlinks.from} – {report.backlinks.to} · {report.backlinks.source}</p>}{page === 6 && <p>Observed ranking groups: {report.ranks.length}. Saved comparison domains: {report.publicComparisons.length}. The JSON export includes complete saved report data.</p>}</details>
           </>
         )
       )}

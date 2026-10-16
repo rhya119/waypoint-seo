@@ -19,7 +19,7 @@ function fixture(options: SiteScannerOptions = {}) {
   return { scanner, calls };
 }
 
-test('public scan pins each request to vetted DNS, extracts actual HTML and checks only two eligible linked pages', async () => {
+test('public scan pins each request to vetted DNS, extracts actual HTML and crawls eligible linked pages breadth-first', async () => {
   const calls: SiteRequest[] = [];
   const page = html.replace('</head>', '<meta property="og:title" content="Garden preview"><meta property="og:image" content="/garden.jpg"><script type="application/ld+json">{"@graph":[{"@type":"Organization"},{"@type":["WebSite","WebPage"]}]}</script></head>')
     .replace('</body>', '<img src="garden.jpg"><img src="decorative.jpg" alt=""><a href="/about">About us</a><a href="/gone">Old guide</a><a href="/third">Third</a><a href="/login">Login</a><a href="/delete/account">Delete</a><a href="/image.jpg">Image</a><a href="/?search=garden">Search</a><a href="https://elsewhere.com/">Source</a><a href="javascript:alert(1)">Unsafe</a><script>secretHiddenWord()</script></body>');
@@ -50,8 +50,13 @@ test('public scan pins each request to vetted DNS, extracts actual HTML and chec
   assert.equal(result.robots.allowed, true);
   assert.equal(result.audit.checks.find((check) => check.name === 'Indexability declaration')?.passed, false);
   assert.equal(result.externalLinks.length, 1);
-  assert.deepEqual(calls.map((input) => input.url.pathname), ['/robots.txt', '/', '/about', '/gone']);
-  assert.equal(result.pageChecks?.length, 3);
+  assert.deepEqual(calls.map((input) => input.url.pathname), ['/robots.txt', '/', '/sitemap.xml', '/about', '/gone', '/third', '/llms.txt']);
+  assert.equal(result.pageChecks?.length, 4);
+  assert.equal(result.llms?.found, false);
+  assert.ok(result.pageIssues?.some((issue) => issue.type === 'Broken page' && issue.url.endsWith('/gone')));
+  assert.ok(result.pageIssues?.some((issue) => issue.type === 'Duplicate title'));
+  assert.equal(result.pageChecks?.[1].inlinks, 3);
+  assert.ok(result.ai && result.ai.score > 0 && result.ai.bots.every((bot) => bot.allowed));
   assert.equal(result.pageChecks?.[2].status, 404);
   assert.ok(result.warnings.some((warning) => warning.includes('Broken internal link')));
   assert.ok(result.warnings.some((warning) => warning.includes('Duplicate title')));
@@ -98,7 +103,7 @@ test('homepage redirects are validated, use target robots and public DNS, and st
   } });
   const result = await scanner.scan(site);
   assert.equal(result.finalUrl, `https://www.${site}/`);
-  assert.deepEqual(calls, [`https://${site}/robots.txt`, `https://${site}/`, `https://www.${site}/robots.txt`, `https://www.${site}/`]);
+  assert.deepEqual(calls, [`https://${site}/robots.txt`, `https://${site}/`, `https://www.${site}/robots.txt`, `https://www.${site}/`, `https://www.${site}/sitemap.xml`, `https://www.${site}/llms.txt`]);
   for (const location of ['https://127.0.0.1/', 'http://public-website.com/', 'https://machine.tail.ts.net/', 'https://user:pass@public-website.com/']) {
     const called: string[] = [];
     const unsafe = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
@@ -129,7 +134,7 @@ test('robots disallow, unreachable policy, non-plain policy and linked-page disa
     return input.url.pathname === '/robots.txt' ? response('User-agent: WaypointSEO\nDisallow: /private', 200, 'text/plain') : response(html.replace('</body>', '<a href="/private">Private page</a></body>'));
   } });
   const result = await scanner.scan(site);
-  assert.deepEqual(calls, ['/robots.txt', '/']);
+  assert.deepEqual(calls, ['/robots.txt', '/', '/sitemap.xml', '/llms.txt']);
   assert.match(result.pageChecks?.[1].error || '', /disallows/);
 });
 
@@ -157,4 +162,110 @@ test('DNS/request/total deadlines stop work and a completed or failed scan relea
   await assert.rejects(pending, (error: unknown) => error instanceof SiteScanError && error.status === 504);
   release(response('', 404, 'text/plain'));
   await assert.rejects(scanner.scan(site), (error: unknown) => error instanceof SiteScanError && error.status === 504);
+});
+
+test('crawl honours the page limit, follows links found on linked pages and reports AI crawler rules and llms.txt', async () => {
+  const calls: string[] = [];
+  const pageFor = (path: string) => html.replace('<title>A practical garden website</title>', `<title>Garden page ${path}</title>`).replace('</body>', `<a href="${path}a">Next</a><a href="${path}b">Other</a></body>`);
+  const scanner = createSiteScanner({ resolve: resolvePublic, maxPages: 5, request: async (input) => {
+    calls.push(input.url.pathname);
+    if (input.url.pathname === '/robots.txt') return response('User-agent: GPTBot\nDisallow: /\n\nUser-agent: PerplexityBot\nDisallow: /\n\nUser-agent: *\nAllow: /', 200, 'text/plain');
+    if (input.url.pathname === '/llms.txt') return response('# Garden\n\n- [Guides](https://public-website.com/guides)\n- [About](https://public-website.com/about)\n- [Shop](https://public-website.com/shop)', 200, 'text/plain');
+    return response(pageFor(input.url.pathname === '/' ? '/p' : input.url.pathname));
+  } });
+  const result = await scanner.scan(site);
+  assert.equal(result.pageChecks?.length, 5);
+  assert.deepEqual(result.pageChecks?.map((page) => page.depth), [0, 1, 1, 2, 2]);
+  assert.ok(result.warnings.some((warning) => warning.includes('5-page limit')));
+  assert.equal(calls.at(-1), '/llms.txt');
+  assert.deepEqual(result.llms, { url: `https://${site}/llms.txt`, status: 200, found: true, lines: 4, links: 3 });
+  const bots = Object.fromEntries(result.ai!.bots.map((bot) => [bot.agent, bot.allowed]));
+  assert.equal(bots.GPTBot, false);
+  assert.equal(bots.PerplexityBot, false);
+  assert.equal(bots['OAI-SearchBot'], true);
+  assert.equal(bots.Googlebot, true);
+  const access = result.ai!.checks.find((check) => check.id === 'ai-search-bots')!;
+  assert.equal(access.passed, false);
+  assert.match(access.fix, /PerplexityBot/);
+  assert.equal(result.ai!.checks.find((check) => check.id === 'llms-txt')?.passed, true);
+  assert.equal(result.ai!.checks.reduce((sum, check) => sum + check.max, 0), 100);
+});
+
+test('compressed responses are decoded with a size cap; budget exhaustion stops the crawl without false issues', async () => {
+  const { gzipSync } = await import('node:zlib');
+  const linked = html.replace('</body>', '<a href="/one">One</a><a href="/two">Two</a><a href="/three">Three</a></body>');
+  const scanner = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
+    if (input.url.pathname === '/robots.txt') return response('', 404, 'text/plain');
+    if (input.url.pathname === '/') return { status: 200, headers: { 'content-type': 'text/html', 'content-encoding': 'gzip' }, body: gzipSync(linked) };
+    if (input.url.pathname === '/one') return response(html.replace('A practical garden website', 'Page one of the garden'));
+    throw new SiteScanError(413, 'Website responses exceed the scan byte limit.');
+  } });
+  const result = await scanner.scan(site);
+  assert.equal(result.title, 'A practical garden website');
+  assert.deepEqual(result.pageChecks?.map((page) => new URL(page.url).pathname), ['/', '/one']);
+  assert.ok(!result.pageIssues?.some((issue) => issue.type === 'Unreachable page'));
+  assert.ok(result.warnings.some((warning) => /download size limit/.test(warning)));
+  const bomb = createSiteScanner({ resolve: resolvePublic, request: async (input) => input.url.pathname === '/robots.txt' ? response('', 404, 'text/plain') : { status: 200, headers: { 'content-type': 'text/html', 'content-encoding': 'gzip' }, body: gzipSync(Buffer.alloc(5_000_000, 32)) } });
+  await assert.rejects(bomb.scan(site), (error: unknown) => error instanceof SiteScanError && error.status === 502 && /oversized/.test(error.message));
+});
+
+test('the three-redirect limit applies per page, not across the whole crawl', async () => {
+  const links = ['/a', '/b', '/c', '/d'].map((path) => `<a href="${path}">${path}</a>`).join('');
+  const scanner = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
+    const path = input.url.pathname;
+    if (path === '/robots.txt') return response('', 404, 'text/plain');
+    if (path === '/') return response(html.replace('</body>', `${links}</body>`));
+    if (path.length === 2) return response('', 301, 'text/html', { location: `${path}/` });
+    return response(html.replace('A practical garden website', `Garden ${path}`));
+  } });
+  const result = await scanner.scan(site);
+  assert.deepEqual(result.pageChecks?.map((page) => page.error ?? new URL(page.url).pathname), ['/', '/a/', '/b/', '/c/', '/d/']);
+});
+
+test('sitemaps (index and gzip) add unlinked pages to the crawl and flag orphans and pages missing from the sitemap', async () => {
+  const { gzipSync } = await import('node:zlib');
+  const index = '<?xml version="1.0"?><sitemapindex><sitemap><loc>https://public-website.com/pages.xml.gz</loc></sitemap><sitemap><loc>https://elsewhere.com/evil.xml</loc></sitemap></sitemapindex>';
+  const pages = '<urlset><url><loc>https://public-website.com/</loc></url><url><loc>https://public-website.com/about</loc></url><url><loc><![CDATA[https://public-website.com/hidden-offer]]></loc></url><url><loc>https://public-website.com/old-page</loc></url><url><loc>https://elsewhere.com/x</loc></url></urlset>';
+  const calls: string[] = [];
+  const scanner = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
+    calls.push(input.url.href);
+    const path = input.url.pathname;
+    if (path === '/robots.txt') return response('User-agent: *\nAllow: /\nSitemap: https://public-website.com/sitemap_index.xml', 200, 'text/plain');
+    if (path === '/sitemap_index.xml') return response(index, 200, 'application/xml');
+    if (path === '/pages.xml.gz') return { status: 200, headers: { 'content-type': 'application/x-gzip' }, body: gzipSync(pages) };
+    if (path === '/old-page') return response('Gone', 404);
+    if (path === '/') return response(html.replace('</body>', '<a href="/about">About</a><a href="/blog">Blog</a></body>'));
+    return response(html.replace('A practical garden website', `Garden ${path}`));
+  } });
+  const result = await scanner.scan(site);
+  assert.ok(!calls.some((url) => url.includes('elsewhere.com')), 'other hosts in a sitemap are never fetched');
+  assert.equal(result.sitemap?.urls, 4);
+  assert.deepEqual(result.sitemap?.sources, ['https://public-website.com/sitemap_index.xml', 'https://public-website.com/pages.xml.gz']);
+  const byPath = Object.fromEntries((result.pageChecks || []).map((page) => [new URL(page.url).pathname, page]));
+  assert.equal(byPath['/hidden-offer']?.source, 'sitemap');
+  assert.equal(byPath['/blog']?.inSitemap, false);
+  const types = (path: string) => (result.pageIssues || []).filter((issue) => new URL(issue.url).pathname === path).map((issue) => issue.type);
+  assert.ok(types('/hidden-offer').includes('Orphan page'));
+  assert.ok(types('/blog').includes('Missing from sitemap'));
+  assert.ok(!types('/about').includes('Missing from sitemap'));
+  assert.match((result.pageIssues || []).find((issue) => issue.url.endsWith('/old-page'))?.detail || '', /listed in your sitemap/);
+});
+
+test('a page reachable at two addresses is reported once, not as a duplicate, orphan or missing from the sitemap', async () => {
+  const pageHtml = (path: string) => html.replace('A practical garden website', `Garden ${path}`).replace('Practical garden ideas', `Practical ${path} ideas`).replace('<link rel="canonical" href="https://public-website.com/">', `<link rel="canonical" href="https://public-website.com${path}">`);
+  const scanner = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
+    const path = input.url.pathname;
+    if (path === '/robots.txt') return response('', 404, 'text/plain');
+    if (path === '/sitemap.xml') return response('<urlset><url><loc>https://public-website.com/</loc></url><url><loc>https://public-website.com/services</loc></url><url><loc>https://public-website.com/team</loc></url></urlset>', 200, 'application/xml');
+    if (path === '/') return response(html.replace('</body>', '<a href="/services.html">Services</a><a href="/team.html">Team</a></body>'));
+    const clean = path.replace(/\.html$/, '');
+    return response(pageHtml(clean));
+  } });
+  const result = await scanner.scan(site);
+  const paths = (result.pageChecks || []).map((page) => new URL(page.url).pathname);
+  assert.deepEqual(paths.sort(), ['/', '/services.html', '/team.html']);
+  const types = [...new Set((result.pageIssues || []).map((issue) => issue.type))];
+  for (const type of ['Duplicate title', 'Duplicate description', 'Orphan page', 'Missing from sitemap']) assert.ok(!types.includes(type), type);
+  assert.ok(types.includes('Links to non-canonical URL'));
+  assert.ok(!result.warnings.some((warning) => warning.startsWith('Duplicate')));
 });

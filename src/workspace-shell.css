@@ -1,0 +1,40 @@
+.simple-shell { color:#203b32; background:#f5f8f6; }
+.simple-shell .sidebar { background:#fff; color:#244537; width:220px; padding:27px 16px 18px; border-right:1px solid #e1e8e3; }
+.simple-shell .sidebar .brand { color:#174936; font-size:27px; padding:0 10px; margin-bottom:34px; }
+.simple-shell .brand-mark,.simple-shell .brand-dot { color:#2d8462; }
+.simple-shell .nav-label { margin:0 12px 12px; color:#7b9185; letter-spacing:1.4px; font-size:10px; }
+.simple-shell nav button { color:#587064; font-size:13px; padding:12px 14px; gap:12px; border-radius:8px; }
+.simple-shell nav button:hover { background:#f2f7f3; color:#184c35; }
+.simple-shell nav button.active { background:#e8f4ec; color:#1a6041; font-weight:700; }
+.simple-shell nav button.active svg { color:#247e52; }
+.simple-shell nav button:nth-child(8) { border-top:1px solid #e2eae5; margin-top:16px; padding-top:18px; border-radius:0; }
+.simple-shell nav button:nth-child(8).active { border-radius:8px; border-top-color:transparent; }
+.simple-shell .main-shell { margin-left:220px; }
+.simple-shell .topbar { height:64px; border-bottom:1px solid #e3eae5; padding:0 34px; background:#fff; }
+.simple-shell .topbar>div:first-child { display:flex; gap:10px; align-items:center; font-size:12px; color:#718779; white-space:nowrap; }
+.simple-shell .topbar strong { color:#385346; }
+.simple-shell .topbar-right { gap:18px; }
+.simple-shell .topbar-right button { font-size:12px; color:#476c57; gap:6px; display:flex; align-items:center; white-space:nowrap; }
+.simple-shell main { max-width:1440px; margin:0 auto; padding:30px 34px 0; }
+.simple-shell .page-heading { margin-bottom:22px; padding:0; border:0; }
+.simple-shell .page-heading h1 { font-size:29px; letter-spacing:-.7px; color:#203d2e; margin:0 0 7px; }
+.simple-shell .page-heading p { color:#667e6f; font-size:14px; line-height:1.7; margin:0; }
+.sidebar-bottom { margin-top:auto; border-top:1px solid #e3ebe5; padding-top:18px; }
+.simple-shell .help-button { color:#5b7865; margin:0; font-size:12px; }
+.private-label { color:#748a7b; font-size:11px; padding:17px 12px 0; line-height:1.7; }
+.private-label .status-dot { display:inline-block; margin-right:7px; background:#71aa84; }
+.private-label small { display:block; margin:6px 0 0 15px; overflow:hidden; text-overflow:ellipsis; font-size:11px; }
+.welcome-strip { display:flex; gap:12px; align-items:center; padding:12px 16px; margin-bottom:18px; background:#edf6f0; border:1px solid #dbece0; border-radius:9px; font-size:13px; line-height:1.7; color:#4e705b; }
+.welcome-strip>.text-button { margin-left:auto; white-space:nowrap; font-size:12px; }
+.welcome-strip>.icon-button { flex-shrink:0; }
+.simple-shell footer { margin-top:30px; color:#84978a; font-size:10px; }
+.simple-shell .panel { border-radius:12px; box-shadow:none; }
+.simple-shell .button { border-radius:7px; font-size:12px; padding:11px 15px; }
+.simple-shell .primary { background:#266f4e; border-color:#266f4e; }
+.simple-shell input,.simple-shell select,.simple-shell textarea { font-size:14px; }
+.simple-shell input:focus-visible,.simple-shell select:focus-visible,.simple-shell textarea:focus-visible,.simple-shell button:focus-visible,.simple-shell a:focus-visible,.simple-shell summary:focus-visible { outline:2px solid #4a9b70; outline-offset:3px; }
+@media(max-width:1100px){.simple-shell .sidebar{width:195px}.simple-shell .main-shell{margin-left:195px}.simple-shell main{padding:25px 24px 0}.simple-shell .topbar{padding-inline:24px}}
+@media(max-width:700px){
+ .simple-shell{display:block}.simple-shell .sidebar{position:static;display:block;width:100%;padding:17px 16px 10px;border-right:0;border-bottom:1px solid #e0e9e3}.simple-shell .sidebar .brand{font-size:25px;margin:0;padding:0}.simple-shell .nav-label,.simple-shell .sidebar-bottom{display:none}.simple-shell .sidebar nav{display:flex;flex-direction:row;overflow:auto;gap:5px;margin-top:15px;padding:2px 0 5px}.simple-shell nav button,.simple-shell nav button:nth-child(8),.simple-shell nav button:nth-child(8).active{flex-shrink:0;width:auto;border:0;margin:0;border-radius:7px;padding:9px 11px;font-size:12px;gap:6px}.simple-shell nav button svg{width:15px}.simple-shell .main-shell{margin:0}.simple-shell .topbar{height:48px;padding-inline:17px}.simple-shell .topbar>div:first-child{font-size:10px;gap:7px}.simple-shell .topbar>div:first-child>span:first-child,.simple-shell .topbar>div:first-child>span:nth-child(2){display:none}.simple-shell .topbar-right{gap:13px}.simple-shell .topbar-right button{font-size:11px}.simple-shell main{padding:22px 16px 0}.simple-shell .page-heading h1{font-size:26px}.simple-shell .page-heading p{font-size:13px;max-width:100%;}.welcome-strip{align-items:flex-start;font-size:12px;flex-wrap:wrap;gap:7px}.welcome-strip>span{flex-basis:calc(100% - 30px)}.welcome-strip>.text-button{order:2;margin-left:0}.welcome-strip>.icon-button{position:relative;margin-left:auto}.simple-shell .button{font-size:12px}
+}
+@media print{.simple-shell .sidebar,.simple-shell .topbar,.simple-shell .welcome-strip,.simple-shell .page-heading{display:none!important}.simple-shell .main-shell{margin:0}.simple-shell main{padding:0}}

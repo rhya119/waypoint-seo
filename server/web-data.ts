@@ -17,7 +17,8 @@ import type { Audit } from "../shared/types.js";
 import type { SiteScan } from '../shared/site-scan.js';
 import { googleSeoInput, type GoogleSeoResult } from '../shared/google-data.js';
 import { trafficEstimateInput, type TrafficEstimateReport } from '../shared/traffic-estimates.js';
-import { webDomain } from '../shared/web-data.js';
+import { webDomain, type ScanSummary } from '../shared/web-data.js';
+import type { PageSpeedReport, PageSpeedResult } from '../shared/research.js';
 export class WebDataError extends Error {
   constructor(
     public status: number,
@@ -70,7 +71,10 @@ export function initWebData(db: DatabaseSync) {
     CREATE TABLE IF NOT EXISTS web_audits(domain TEXT PRIMARY KEY,payload TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS web_site_scans(domain TEXT PRIMARY KEY,payload TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS web_google_reports(domain TEXT PRIMARY KEY,payload TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS web_traffic_estimates(domain TEXT PRIMARY KEY,payload TEXT NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS web_traffic_estimates(domain TEXT PRIMARY KEY,payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS web_pagespeed(domain TEXT PRIMARY KEY,payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS web_scan_history(id INTEGER PRIMARY KEY,domain TEXT NOT NULL,scanned_at TEXT NOT NULL,payload TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS web_scan_history_domain ON web_scan_history(domain,scanned_at);`);
 }
 const number = (s: string | undefined) =>
   s === undefined || !s.trim()
@@ -221,7 +225,7 @@ function writeDataset(db: DatabaseSync, data: Pick<WebImportInput, 'domain' | 'k
   );
 }
 
-const payloadTables = ['web_site_scans', 'web_google_reports', 'web_traffic_estimates'] as const;
+const payloadTables = ['web_site_scans', 'web_google_reports', 'web_traffic_estimates', 'web_pagespeed'] as const;
 type PayloadTable = typeof payloadTables[number];
 function hasTable(db: DatabaseSync, table: string) {
   return Boolean(db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name=?').get(table));
@@ -238,7 +242,21 @@ export function saveSiteScan(db: DatabaseSync, result: SiteScan, expectedDomain?
   const domain = webDomain.parse(result.domain);
   if (expectedDomain && domain !== webDomain.parse(expectedDomain)) throw new WebDataError(502, 'The scanner returned a result for a different requested domain. No result was saved.');
   savePayload(db, 'web_site_scans', domain, { ...result, domain });
+  if (hasTable(db, 'web_scan_history')) {
+    const summary: ScanSummary = {
+      scannedAt: result.scannedAt, pages: result.pageChecks?.length || 1, checklist: result.audit.score, aiScore: result.ai?.score ?? null, auto: Boolean(result.auto),
+      issues: [...new Set([...(result.pageIssues || []).map((issue) => `${issue.type}|${issue.url}`), ...(result.ai?.checks || []).filter((check) => !check.passed).map((check) => `AI: ${check.name}|${result.finalUrl}`)])].slice(0, 1000),
+    };
+    db.prepare('INSERT INTO web_scan_history(domain,scanned_at,payload) VALUES(?,?,?)').run(domain, result.scannedAt, JSON.stringify(summary));
+    db.prepare('DELETE FROM web_scan_history WHERE domain=? AND id NOT IN (SELECT id FROM web_scan_history WHERE domain=? ORDER BY scanned_at DESC,id DESC LIMIT 20)').run(domain, domain);
+  }
   return { ...result, domain };
+}
+export function savePageSpeed(db: DatabaseSync, result: PageSpeedResult): PageSpeedReport {
+  const domain = webDomain.parse(result.domain);
+  const saved = { ...(savedPayload<PageSpeedReport>(db, 'web_pagespeed', domain) || {}), [result.strategy]: result };
+  savePayload(db, 'web_pagespeed', domain, saved);
+  return saved;
 }
 function googleQueryScope(property: string) {
   const base = 'All countries/devices; web search; final; ';
@@ -314,7 +332,7 @@ export function webReport(
   const site = savedPayload<SiteScan>(db, 'web_site_scans', domain);
   const publicComparisons = hasTable(db, 'web_site_scans') ? (db.prepare("SELECT domain,payload FROM web_site_scans WHERE domain<>? ORDER BY json_extract(payload,'$.scannedAt') DESC,domain LIMIT 100").all(domain) as { domain: string; payload: string }[]).map((row) => {
     const scan = JSON.parse(row.payload) as SiteScan;
-    return { domain: row.domain, title: scan.title, wordCount: scan.wordCount, score: scan.audit.score, scannedAt: scan.scannedAt, url: scan.finalUrl };
+    return { domain: row.domain, title: scan.title, wordCount: scan.wordCount, score: scan.audit.score, scannedAt: scan.scannedAt, url: scan.finalUrl, pages: scan.pageChecks?.length || 1, issues: scan.pageIssues?.length, aiScore: scan.ai?.score ?? null, aiGrade: scan.ai?.grade ?? null, schema: scan.structuredDataTypes.slice(0, 6), llms: scan.llms?.found };
   }) : [];
   const auditRow = hasTable(db, 'web_audits') ? db.prepare('SELECT payload FROM web_audits WHERE domain=?').get(domain) as { payload: string } | undefined : undefined;
   const empty: WebReport = {
@@ -341,6 +359,8 @@ export function webReport(
     tracks: hasTable(db, 'web_tracks') ? db.prepare('SELECT keyword,country,device FROM web_tracks WHERE domain=? ORDER BY keyword').all(domain) as WebReport['tracks'] : [],
     competitors: [],
     audit: auditRow ? JSON.parse(auditRow.payload) as Audit : site?.audit || null,
+    pageSpeed: savedPayload<PageSpeedReport>(db, 'web_pagespeed', domain),
+    scanHistory: hasTable(db, 'web_scan_history') ? (db.prepare('SELECT payload FROM web_scan_history WHERE domain=? ORDER BY scanned_at DESC,id DESC LIMIT 10').all(domain) as { payload: string }[]).map((row) => JSON.parse(row.payload) as ScanSummary) : [],
     disclosure,
   };
   const stored = hasTable(db, 'web_datasets') ? db

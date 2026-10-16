@@ -4,6 +4,7 @@ import type { Audit } from "./types.js";
 import type { SiteScan } from './site-scan.js';
 import type { GoogleSeoResult } from './google-data.js';
 import type { TrafficEstimateReport } from './traffic-estimates.js';
+import type { PageSpeedReport } from './research.js';
 export function normalizeWebDomain(value: string) {
   const url = new URL(value.includes("://") ? value : `https://${value}`);
   if (
@@ -86,7 +87,7 @@ export type WebDataset = {
 };
 export type WebReport = {
   site: SiteScan | null;
-  publicComparisons: { domain: string; title: string; wordCount: number; score: number; scannedAt: string; url: string }[];
+  publicComparisons: { domain: string; title: string; wordCount: number; score: number; scannedAt: string; url: string; pages?: number; issues?: number; aiScore?: number | null; aiGrade?: string | null; schema?: string[]; llms?: boolean }[];
   google: GoogleSeoResult | null;
   trafficEstimate: TrafficEstimateReport | null;
   domain: string;
@@ -118,8 +119,11 @@ export type WebReport = {
     scope: string;
   }[];
   audit: Audit | null;
+  pageSpeed: PageSpeedReport | null;
+  scanHistory: ScanSummary[];
   disclosure: string;
 };
+export type ScanSummary = { scannedAt: string; pages: number; checklist: number; aiScore: number | null; issues: string[]; auto?: boolean };
 export const trackInput = z.object({
   domain: webDomain,
   keyword: z.string().trim().min(1).max(200),

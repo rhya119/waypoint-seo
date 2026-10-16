@@ -3,6 +3,11 @@ export async function api<T>(path: string, body?: unknown, method?: string): Pro
   if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Request failed.'); }
   return response.status === 204 ? undefined as T : response.json();
 }
+/** Open a Site health tab from anywhere: the next SiteHealth mount reads it once. */
+export function openHealthTab(tab: 'issues' | 'pages' | 'ai' | 'speed') {
+  try { sessionStorage.setItem('waypoint-health-tab', tab); } catch { /* optional */ }
+  window.dispatchEvent(new CustomEvent('waypoint-health-tab', { detail: tab }));
+}
 export const number = (value: number) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
 export function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type })); const anchor = document.createElement('a');
