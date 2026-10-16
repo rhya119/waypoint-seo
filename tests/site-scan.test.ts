@@ -250,3 +250,22 @@ test('sitemaps (index and gzip) add unlinked pages to the crawl and flag orphans
   assert.ok(!types('/about').includes('Missing from sitemap'));
   assert.match((result.pageIssues || []).find((issue) => issue.url.endsWith('/old-page'))?.detail || '', /listed in your sitemap/);
 });
+
+test('a page reachable at two addresses is reported once, not as a duplicate, orphan or missing from the sitemap', async () => {
+  const pageHtml = (path: string) => html.replace('A practical garden website', `Garden ${path}`).replace('Practical garden ideas', `Practical ${path} ideas`).replace('<link rel="canonical" href="https://public-website.com/">', `<link rel="canonical" href="https://public-website.com${path}">`);
+  const scanner = createSiteScanner({ resolve: resolvePublic, request: async (input) => {
+    const path = input.url.pathname;
+    if (path === '/robots.txt') return response('', 404, 'text/plain');
+    if (path === '/sitemap.xml') return response('<urlset><url><loc>https://public-website.com/</loc></url><url><loc>https://public-website.com/services</loc></url><url><loc>https://public-website.com/team</loc></url></urlset>', 200, 'application/xml');
+    if (path === '/') return response(html.replace('</body>', '<a href="/services.html">Services</a><a href="/team.html">Team</a></body>'));
+    const clean = path.replace(/\.html$/, '');
+    return response(pageHtml(clean));
+  } });
+  const result = await scanner.scan(site);
+  const paths = (result.pageChecks || []).map((page) => new URL(page.url).pathname);
+  assert.deepEqual(paths.sort(), ['/', '/services.html', '/team.html']);
+  const types = [...new Set((result.pageIssues || []).map((issue) => issue.type))];
+  for (const type of ['Duplicate title', 'Duplicate description', 'Orphan page', 'Missing from sitemap']) assert.ok(!types.includes(type), type);
+  assert.ok(types.includes('Links to non-canonical URL'));
+  assert.ok(!result.warnings.some((warning) => warning.startsWith('Duplicate')));
+});

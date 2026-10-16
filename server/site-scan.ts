@@ -232,13 +232,27 @@ function inspectHtml(html: string, finalUrl: URL, response: SiteResponse) {
 }
 
 type IssueInput = NonNullable<SiteScan['pageChecks']>;
+const stripSlash = (url: string) => url.length > 1 && url.endsWith('/') ? url.slice(0, -1) : url;
+/** One identity for the addresses a static site serves the same page at:
+ * /services, /services/, /services.html and /services/index.html. */
+export function pageKey(page: { url: string }) {
+  try {
+    const url = new URL(page.url);
+    const path = url.pathname.replace(/\/index\.html?$/i, '/').replace(/\.html?$/i, '').replace(/\/+$/, '') || '/';
+    return `${url.hostname.replace(/^www\./, '')}${path}${url.search}`;
+  } catch { return stripSlash(page.url); }
+}
 export function findPageIssues(pages: IssueInput): NonNullable<SiteScan['pageIssues']> {
   const issues: NonNullable<SiteScan['pageIssues']> = [];
   const add = (type: string, severity: 'error' | 'warning', url: string, detail: string) => { if (issues.length < 1000) issues.push({ type, severity, url, detail }); };
   const titles = new Map<string, number>();
   const descriptions = new Map<string, number>();
   const key = (value: string) => value.toLowerCase().trim();
+  const counted = new Set<string>();
   for (const page of pages) if (!page.error) {
+    const id = pageKey(page);
+    if (counted.has(id)) continue;
+    counted.add(id);
     if (key(page.title)) titles.set(key(page.title), (titles.get(key(page.title)) || 0) + 1);
     if (key(page.description)) descriptions.set(key(page.description), (descriptions.get(key(page.description)) || 0) + 1);
   }
@@ -462,11 +476,13 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
           }
         }
         sitemap.urls = sitemapUrls.size;
-        const inSitemap = (url: string) => sitemapUrls.has(url) || sitemapUrls.has(url.endsWith('/') ? url.slice(0, -1) : `${url}/`);
+        const sitemapKeys = new Set([...sitemapUrls].map((url) => pageKey({ url })));
+        const inSitemap = (url: string) => sitemapKeys.has(pageKey({ url }));
         const sitemapOnly: URL[] = [];
         for (const href of sitemapUrls) { const url = new URL(href); if (eligible(url)) sitemapOnly.push(url); }
+        const crawledKeys = new Set<string>([pageKey(pageChecks[0])]);
         const nextPage = (): { url: URL; depth?: number; source: 'link' | 'sitemap' } | undefined => {
-          const fromSitemap = () => { while (sitemapOnly.length) { const url = sitemapOnly.shift()!; if (!visited.has(url.href)) { visited.add(url.href); return { url, source: 'sitemap' as const }; } } return undefined; };
+          const fromSitemap = () => { while (sitemapOnly.length) { const url = sitemapOnly.shift()!; if (!visited.has(url.href) && !crawledKeys.has(pageKey({ url: url.href }))) { visited.add(url.href); return { url, source: 'sitemap' as const }; } } return undefined; };
           if (!queue.length || pageChecks.length % 5 === 4) { const page = fromSitemap(); if (page) return page; }
           const link = queue.shift();
           return link ? { ...link, source: 'link' } : fromSitemap();
@@ -501,7 +517,9 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
             const type = header(pageResponse, 'content-type').split(';')[0].trim().toLowerCase();
             if (type !== 'text/html' && type !== 'application/xhtml+xml') throw new SiteScanError(415, 'The linked URL did not return HTML.');
             const page = inspectHtml(pageResponse.body.toString('utf8'), pageUrl, pageResponse);
-            pageChecks.push(pageRecord(pageUrl, pageStatus, page, Date.now() - pageStarted, depth, source));
+            const record = pageRecord(pageUrl, pageStatus, page, Date.now() - pageStarted, depth, source);
+            pageChecks.push(record);
+            crawledKeys.add(pageKey(record));
             countLinks(page.internalLinks);
             enqueue(page.internalLinks, (depth ?? 1) + 1);
           } catch (error) {
@@ -517,12 +535,27 @@ export function createSiteScanner(options: SiteScannerOptions = {}) {
           }
         }
         if ((queue.length || sitemapOnly.some((url) => !visited.has(url.href))) && pageChecks.length >= maxPages) warnings.push(`The crawl stopped at its ${maxPages}-page limit; more linked or sitemap pages were not checked.`);
-        for (const page of pageChecks) { page.inlinks = linkedFrom.get(page.url) || 0; if (sitemap.urls) page.inSitemap = inSitemap(page.url); }
+        for (const page of pageChecks) page.inlinks = linkedFrom.get(page.url) || 0;
+        // One page can be reachable at two addresses (/services.html linked, /services in the
+        // sitemap and canonical). Report it once, under the address the site links to.
+        const groups = new Map<string, PageCheck[]>();
+        for (const page of pageChecks) if (!page.error) groups.set(pageKey(page), [...(groups.get(pageKey(page)) || []), page]);
+        const merged = new Set<PageCheck>();
+        for (const group of groups.values()) {
+          if (group.length < 2) continue;
+          const keep = group.find((page) => page.source !== 'sitemap') || group[0];
+          keep.inlinks = group.reduce((sum, page) => sum + (page.inlinks || 0), 0);
+          for (const page of group) if (page !== keep) merged.add(page);
+        }
+        if (merged.size) pageChecks.splice(0, pageChecks.length, ...pageChecks.filter((page) => !merged.has(page)));
+        if (sitemap.urls) for (const page of pageChecks) page.inSitemap = inSitemap(page.url);
         for (const field of ['title', 'description'] as const) {
           const seen = new Map<string, string>();
+          const seenPages = new Set<string>();
           for (const page of pageChecks.filter((check) => !check.error)) {
             const key = page[field].toLowerCase().trim();
-            if (!key) continue;
+            if (!key || seenPages.has(pageKey(page))) continue;
+            seenPages.add(pageKey(page));
             if (seen.has(key)) warnings.push(`Duplicate ${field === 'title' ? 'title' : 'meta description'} among checked pages: ${seen.get(key)} and ${page.url}.`);
             else seen.set(key, page.url);
           }
